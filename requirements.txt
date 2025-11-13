@@ -8,3 +8,4 @@ datasets>=2.19
 langdetect>=1.0.9
 yt-dlp>=2024.3.10
 tqdm>=4.66
+numpy>=1.26

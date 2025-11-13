@@ -31,6 +31,7 @@ const INT_FIELDS = new Set([
   'sample_interval',
   'sample_max_new_tokens',
   'sample_top_k',
+  'checkpoint_interval',
 ]);
 
 const INT_FIELDS_ALLOW_ZERO = new Set(['sample_interval', 'sample_max_new_tokens', 'sample_top_k']);
@@ -55,40 +56,46 @@ const formatPresetLabel = (key) =>
     .join(' ');
 
 const DEFAULT_TRAINING_CONFIG = {
-  run_name: '',
-  max_steps: '200',
-  batch_size: '16',
-  block_size: '256',
-  embed_dim: '128',
-  vocab_size: '256',
-  layernorm_dim: '128',
-  head_dim: '128',
-  num_heads: '4',
-  num_layers: '4',
-  ff_hidden_dim: '512',
+  run_name: 'french_medium_60k',
+  max_steps: '60000',
+  batch_size: '4',
+  block_size: '1024',
+  embed_dim: '1024',
+  vocab_size: '32000',
+  layernorm_dim: '',
+  head_dim: '',
+  num_heads: '16',
+  num_layers: '18',
+  ff_hidden_dim: '4096',
   dropout: '0.1',
-  lr: '0.0003',
+  lr: '0.0001',
   weight_decay: '0.0',
-  eval_interval: '50',
-  eval_batches: '10',
-  metrics_log_fraction: '0.05',
-  sample_interval: '100',
-  sample_max_new_tokens: '60',
-  sample_temperature: '0.8',
+  eval_interval: '500',
+  eval_batches: '16',
+  metrics_log_fraction: '0.01',
+  sample_interval: '1000',
+  sample_max_new_tokens: '120',
+  sample_temperature: '0.85',
   sample_top_k: '50',
   device: 'cuda',
-  arch_preset: '',
+  arch_preset: 'medium',
   extra_data_dirs: [],
+  checkpoint_interval: '5000',
+  tokenizer_path: 'trained_models/tokenizers/fineweb-32k/tokenizer.json',
+  pretokenized_path: 'data_clean/mixed_tokenized.pt',
 };
 
 const DATA_DIR_PATHS = {
+  test: 'data_clean/test',
   subtitles: 'data_clean/youtube',
   linkedin: 'data_clean/linkedin',
   instagram: 'data_clean/instagram',
   wikipedia: 'data_clean/wikipedia',
   fineweb: 'data_clean/fineweb_fr',
+  fineweb_full: 'data_clean/fineweb',
   bloom_lm: 'data_clean/bloom_lm',
   oscar: 'data_clean/oscar_fr',
+  french_pd_books: 'data_clean/french_pd_books',
 };
 
 const DEFAULT_TOKENIZER_CONFIG = {
@@ -206,6 +213,13 @@ function describeGpu(info) {
 
 const DATA_TASKS = [
   {
+    key: 'test',
+    title: '🧪 Test Corpus (Quick Start)',
+    description: 'Petit corpus de test pour validation rapide du pipeline.',
+    icon: '🧪',
+    disabled: false,
+  },
+  {
     key: 'subtitles',
     title: 'Sous-titres YouTube',
     description: 'Convertit les fichiers .vtt en texte nettoyé (un .txt par vidéo).',
@@ -231,7 +245,7 @@ const DATA_TASKS = [
   },
   {
     key: 'fineweb',
-    title: 'FineWeb (FR)',
+    title: 'FineWeb (FR) 🔄 EN COURS',
     description: 'Télécharge un extrait francophone via Hugging Face (filtrage langdetect).',
     icon: '🍷',
     buildPayload: () => {
@@ -273,6 +287,27 @@ const DATA_TASKS = [
       }
       if (maxBytes) {
         payload.max_bytes = maxBytes;
+      }
+      return payload;
+    },
+  },
+  {
+    key: 'french_pd_books',
+    title: 'French-PD-Books (PleIAs)',
+    description: 'Corpus de livres français libres de droit (Hugging Face).',
+    icon: '📖',
+    buildPayload: () => {
+      const maxDocs = window.prompt(
+        'Nombre max de documents (laisser vide pour tous):',
+        '5000',
+      );
+      if (maxDocs === null) return null;
+      const payload = {};
+      if (maxDocs && maxDocs.trim()) {
+        const parsed = Number.parseInt(maxDocs, 10);
+        if (Number.isFinite(parsed) && parsed > 0) {
+          payload.max_docs = parsed;
+        }
       }
       return payload;
     },

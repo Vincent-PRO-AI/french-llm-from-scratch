@@ -971,6 +971,33 @@ def create_app(config: ServerConfig) -> Flask:
         "latest_run_name": None,
     }
 
+    @app.get("/")
+    def root() -> Any:
+        # Provide a friendly landing response instead of 404 when hitting the API root
+        return jsonify(
+            {
+                "message": "MiniGPT Dashboard API",
+                "hint": "Use the frontend at http://127.0.0.1:5173 or query the endpoints below",
+                "endpoints": [
+                    "/metadata",
+                    "/metrics",
+                    "/visuals",
+                    "/runs",
+                    "/select",
+                    "/chat",
+                    "/data/prepare",
+                    "/data/status",
+                    "/train",
+                    "/train/status",
+                    "/train/resume",
+                    "/train/stop",
+                    "/tokenizer/train",
+                    "/tokenizer/status",
+                    "/tokenizer/test",
+                ],
+            }
+        )
+
     def progress_handler(update: Dict[str, Any]) -> None:
         run_dir = update.get("run_dir")
         if not run_dir:
@@ -1239,6 +1266,24 @@ def create_app(config: ServerConfig) -> Flask:
         fallback_device = current_defaults().get("device", default_device)
         config_payload.setdefault("device", fallback_device)
         config_payload["device"] = _normalise_device(config_payload.get("device"))
+        # Normaliser memmap_path en absolu si fourni
+        if "memmap_path" in config_payload and config_payload["memmap_path"]:
+            memmap_path = Path(config_payload["memmap_path"])
+            if not memmap_path.is_absolute():
+                memmap_path = ROOT / memmap_path
+            config_payload["memmap_path"] = str(memmap_path)
+        # Normaliser pretokenized_path en absolu si fourni
+        if "pretokenized_path" in config_payload and config_payload["pretokenized_path"]:
+            pretokenized_path = Path(config_payload["pretokenized_path"])
+            if not pretokenized_path.is_absolute():
+                pretokenized_path = ROOT / pretokenized_path
+            config_payload["pretokenized_path"] = str(pretokenized_path)
+        # Normaliser tokenizer_path en absolu si fourni
+        if "tokenizer_path" in config_payload and config_payload["tokenizer_path"]:
+            tokenizer_path = Path(config_payload["tokenizer_path"])
+            if not tokenizer_path.is_absolute():
+                tokenizer_path = ROOT / tokenizer_path
+            config_payload["tokenizer_path"] = str(tokenizer_path)
         try:
             training_job.start(config_payload)
         except RuntimeError as exc:
@@ -1284,8 +1329,29 @@ def create_app(config: ServerConfig) -> Flask:
             except (TypeError, ValueError):
                 return jsonify({"error": "max_steps doit être un entier"}), 400
 
+        # Attempt safe load first (weights_only=True introduced in PyTorch 2.6).
+        # If it fails due to restricted globals, fall back to unsafe load only for a local trusted file.
+        checkpoint_data = None
         try:
-            checkpoint_data = torch.load(checkpoint_path, map_location="cpu")
+            # First, allowlist pathlib.PosixPath for safe unpickling if needed
+            try:
+                import pathlib as _pl  # type: ignore
+                if hasattr(torch, "serialization") and hasattr(torch.serialization, "add_safe_globals"):
+                    torch.serialization.add_safe_globals([_pl.PosixPath])  # type: ignore[attr-defined]
+            except Exception:
+                pass
+            # Try safe load (weights_only=True) when supported
+            try:
+                checkpoint_data = torch.load(checkpoint_path, map_location="cpu", weights_only=True)  # type: ignore[call-arg]
+            except TypeError:
+                # Older torch: no weights_only kw, fall back to default
+                checkpoint_data = torch.load(checkpoint_path, map_location="cpu")
+            except Exception:
+                # If safe load fails, try unsafe load for trusted local file
+                try:
+                    checkpoint_data = torch.load(checkpoint_path, map_location="cpu", weights_only=False)  # type: ignore[call-arg]
+                except TypeError:
+                    checkpoint_data = torch.load(checkpoint_path, map_location="cpu")
         except Exception as exc:  # noqa: BLE001
             return jsonify({"error": f"Lecture du checkpoint impossible: {exc}"}), 500
         resume_step = int(checkpoint_data.get("step", 0)) if isinstance(checkpoint_data, dict) else 0

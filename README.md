@@ -21,10 +21,7 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
 
-# Start the Flask server with the most recent run (adjust paths if needed)
-RUN_DIR=$(ls -td trained_models/runs/run-* | head -n1)
-python dashboard/server.py --run-dir "$RUN_DIR" --checkpoint "$RUN_DIR/checkpoint.pt" --port 8000
-```
+# Start the Flask server with the most recent run (adjust paths if neede
 
 This launches the REST API on http://127.0.0.1:8000 with endpoints such as `/metadata`, `/metrics`, `/train`, `/tokenizer/**` and `/chat`.
 

@@ -10,12 +10,14 @@ import random
 import time
 import threading
 from dataclasses import dataclass, field
+from tokenizers import Tokenizer
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional, Sequence, Set
 
 import torch
 from torch import nn
+import numpy as np
 from torch.utils.data import DataLoader, Dataset
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -164,6 +166,15 @@ class Config:
     extra_data_dirs: list[Path] = field(default_factory=list)
     resume_checkpoint: Optional[Path] = None
     resume_run_dir: Optional[Path] = None
+    # Optional: path to a numpy memmap .bin file (uint8) representing the full byte corpus
+    memmap_path: Optional[Path] = None
+    tokenizer_path: Optional[Path] = None
+    # Optional: path to a pre-tokenized corpus saved as torch tensor (.pt file)
+    pretokenized_path: Optional[Path] = None
+    # Entraînement: activer AMP (mixed precision) si CUDA
+    use_amp: bool = True
+    # Intervalle pour sauvegarder des checkpoints périodiques (0 = désactivé)
+    checkpoint_interval: int = 5000
 
 
 def _coerce_value(example: Any, value: Any) -> Any:
@@ -393,7 +404,7 @@ class VisualLogger:
 
 
 class SubtitleCorpus:
-    def __init__(self, directory: Path, extra_dirs: Optional[Sequence[Path]] = None) -> None:
+    def __init__(self, directory: Path, extra_dirs: Optional[Sequence[Path]] = None, tokenizer_path: Optional[Path] = None) -> None:
         primary = Path(directory)
         directories: list[Path] = [primary]
         if extra_dirs:
@@ -405,6 +416,7 @@ class SubtitleCorpus:
                 if extra_path not in directories:
                     directories.append(extra_path)
         self.directories = directories
+        self.tokenizer_path = Path(tokenizer_path) if tokenizer_path is not None else None
 
     def _iter_files(self) -> list[Path]:
         files: list[Path] = []
@@ -445,6 +457,33 @@ class SubtitleCorpus:
         return sentinel.join(docs).encode("utf-8")
 
     def to_tensor(self) -> torch.Tensor:
+        """
+        Return a 1D tensor of token ids. If a tokenizer_path was provided and exists,
+        use the tokenizer to encode documents to token ids; otherwise fall back to
+        byte-level encoding.
+        """
+        if self.tokenizer_path is not None and self.tokenizer_path.exists():
+            # Use tokenizer to produce token ids
+            tokenizer = Tokenizer.from_file(str(self.tokenizer_path))
+            all_ids: list[int] = []
+            docs = self.load_documents()
+            for doc in docs:
+                try:
+                    enc = tokenizer.encode(doc)
+                    ids = enc.ids
+                except Exception:
+                    # Fallback: simple split by whitespace and encode nothing
+                    ids = []
+                if ids:
+                    all_ids.extend(ids)
+                    # add a sentinel between documents to separate
+                    sep_id = tokenizer.token_to_id('[SEP]') or tokenizer.token_to_id('<sep>') or 0
+                    all_ids.append(sep_id)
+            if not all_ids:
+                raise RuntimeError("Tokenizer produced no token ids for corpus.")
+            return torch.tensor(all_ids, dtype=torch.long)
+
+        # Fallback: byte-level
         corpus_bytes = self.to_bytes()
         return torch.tensor(list(corpus_bytes), dtype=torch.long)
 
@@ -477,6 +516,60 @@ class ByteDataset(Dataset):
             seq_len = random.randint(self.min_seq_len, max_len)
         src = chunk[:seq_len]
         tgt = chunk[1 : seq_len + 1]
+        return {"src": src, "tgt": tgt, "length": torch.tensor(seq_len, dtype=torch.long)}
+
+
+class MemmapByteDataset(Dataset):
+    """Byte-level dataset backed by a numpy memmap file to avoid loading everything in RAM.
+
+    The memmap is expected to be a flat uint8 array (values 0..255) created from the concatenation
+    of documents separated by a sentinel if desired. We index a window within [start:end].
+    """
+
+    def __init__(
+        self,
+        mmap: np.memmap,
+        start: int,
+        end: int,
+        block_size: int,
+        min_seq_len: int,
+    ) -> None:
+        if end <= start:
+            raise ValueError("end must be greater than start")
+        if block_size <= 0:
+            raise ValueError("block_size must be positive")
+        if min_seq_len <= 0:
+            raise ValueError("min_seq_len must be > 0")
+        if min_seq_len > block_size:
+            raise ValueError("min_seq_len cannot exceed block_size")
+        self.mmap = mmap
+        self.start = int(start)
+        self.end = int(end)
+        self.block_size = int(block_size)
+        self.min_seq_len = int(min_seq_len)
+
+    def __len__(self) -> int:
+        return max(0, (self.end - self.start) - self.block_size)
+
+    def __getitem__(self, idx: int) -> dict[str, torch.Tensor]:
+        base = self.start + idx
+        hi = base + self.block_size + 1
+        if hi > self.end:
+            # wrap within range by modulo to keep DataLoader cycling
+            span = max(1, (self.end - self.start) - (self.block_size + 1))
+            base = self.start + (idx % span)
+            hi = base + self.block_size + 1
+        chunk_np = np.asarray(self.mmap[base:hi], dtype=np.uint8)
+        max_len = int(chunk_np.shape[0] - 1)
+        if max_len < self.min_seq_len:
+            # Fallback: take the maximum available length
+            seq_len = max(1, max_len)
+        else:
+            seq_len = max_len if self.min_seq_len == max_len else random.randint(self.min_seq_len, max_len)
+        if seq_len <= 0:
+            seq_len = 1
+        src = torch.from_numpy(chunk_np[:seq_len].copy()).to(dtype=torch.long)
+        tgt = torch.from_numpy(chunk_np[1: seq_len + 1].copy()).to(dtype=torch.long)
         return {"src": src, "tgt": tgt, "length": torch.tensor(seq_len, dtype=torch.long)}
 
 
@@ -608,18 +701,71 @@ class SubtitleDataModule:
         return tokens, targets, padding_mask
 
     def setup(self) -> None:
+        print(f"[DEBUG] setup() called, memmap_path={self.cfg.memmap_path}")
         if self._train_loader is not None and self._val_loader is not None:
+            print("[DEBUG] Loaders already exist, skipping setup")
             return
-        corpus = SubtitleCorpus(self.cfg.data_dir, extra_dirs=self.cfg.extra_data_dirs)
-        data_tensor = corpus.to_tensor()
-        split_idx = int(len(data_tensor) * self.cfg.train_split)
-        train_tensor = data_tensor[:split_idx]
-        val_tensor = data_tensor[split_idx:]
-        if len(val_tensor) <= self.cfg.block_size:
-            val_tensor = train_tensor[-(self.cfg.block_size + len(val_tensor) + 1) :]
 
-        train_ds = ByteDataset(train_tensor, self.cfg.block_size, self._min_seq_len)
-        val_ds = ByteDataset(val_tensor, self.cfg.block_size, self._min_seq_len)
+        # If a pre-tokenized corpus is provided, load it directly (fast!)
+        if self.cfg.pretokenized_path is not None:
+            print(f"[DEBUG] Loading pre-tokenized corpus from {self.cfg.pretokenized_path}")
+            pretok_path = Path(self.cfg.pretokenized_path)
+            if not pretok_path.exists():
+                raise FileNotFoundError(f"Pre-tokenized corpus not found: {pretok_path}")
+            data_tensor = torch.load(pretok_path, map_location="cpu")
+            if not isinstance(data_tensor, torch.Tensor) or data_tensor.ndim != 1:
+                raise ValueError("Pre-tokenized corpus must be a 1D tensor")
+            print(f"[DEBUG] Loaded {len(data_tensor):,} tokens from pre-tokenized corpus")
+            split_idx = int(len(data_tensor) * self.cfg.train_split)
+            train_tensor = data_tensor[:split_idx]
+            val_tensor = data_tensor[split_idx:]
+            if len(val_tensor) <= self.cfg.block_size:
+                val_tensor = train_tensor[-(self.cfg.block_size + len(val_tensor) + 1) :]
+
+            train_ds = ByteDataset(train_tensor, self.cfg.block_size, self._min_seq_len)
+            val_ds = ByteDataset(val_tensor, self.cfg.block_size, self._min_seq_len)
+        # If a memmap corpus is provided, use it to avoid loading everything into RAM
+        elif self.cfg.memmap_path is not None:
+            print(f"[DEBUG] Using memmap path: {self.cfg.memmap_path}")
+            mmap_path = Path(self.cfg.memmap_path)
+            if not mmap_path.exists():
+                raise FileNotFoundError(f"Memmap file not found: {mmap_path}")
+            mmap = np.memmap(mmap_path, mode="r", dtype=np.uint8)
+            total = int(mmap.shape[0])
+            if total <= self.cfg.block_size + 1:
+                raise ValueError("Memmap too small for configured block_size")
+            split_idx = int(total * self.cfg.train_split)
+            # Ensure validation slice has enough room
+            val_start = max(split_idx, self.cfg.block_size + 1)
+            train_end = max(val_start, split_idx)
+            train_ds = MemmapByteDataset(
+                mmap, 0, train_end, self.cfg.block_size, self._min_seq_len
+            )
+            val_ds = MemmapByteDataset(
+                mmap,
+                val_start - (self.cfg.block_size + 1),
+                total,
+                self.cfg.block_size,
+                self._min_seq_len,
+            )
+        else:
+            # Fallback to building a single 1D tensor in memory (byte-level or tokenizer-based)
+            print("[DEBUG] memmap_path is None, falling back to in-memory corpus")
+            print(f"[DEBUG] data_dir={self.cfg.data_dir}, extra_dirs={self.cfg.extra_data_dirs}")
+            corpus = SubtitleCorpus(
+                self.cfg.data_dir,
+                extra_dirs=self.cfg.extra_data_dirs,
+                tokenizer_path=self.cfg.tokenizer_path,
+            )
+            data_tensor = corpus.to_tensor()
+            split_idx = int(len(data_tensor) * self.cfg.train_split)
+            train_tensor = data_tensor[:split_idx]
+            val_tensor = data_tensor[split_idx:]
+            if len(val_tensor) <= self.cfg.block_size:
+                val_tensor = train_tensor[-(self.cfg.block_size + len(val_tensor) + 1) :]
+
+            train_ds = ByteDataset(train_tensor, self.cfg.block_size, self._min_seq_len)
+            val_ds = ByteDataset(val_tensor, self.cfg.block_size, self._min_seq_len)
 
         self._train_loader = DataLoader(
             train_ds,
@@ -764,6 +910,29 @@ class SubtitleTrainer:
                 "compute_capability": f"{props.major}.{props.minor}",
             }
 
+        # If a tokenizer is provided, ensure vocab_size matches tokenizer vocab
+        try:
+            if self.cfg.tokenizer_path is not None:
+                tok_path = Path(self.cfg.tokenizer_path)
+                # Resolve relative tokenizer path against ROOT to ensure it is always accessible
+                if not tok_path.is_absolute():
+                    tok_path = ROOT / tok_path
+                if tok_path.exists():
+                    try:
+                        tokenizer = Tokenizer.from_file(str(tok_path))
+                        vocab = getattr(tokenizer, "get_vocab_size", None)
+                        vocab_size = int(vocab()) if callable(vocab) else None
+                    except Exception:
+                        vocab_size = None
+                    if vocab_size and vocab_size != self.cfg.vocab_size:
+                        print(f"[tokenizer] Override vocab_size: {self.cfg.vocab_size} -> {vocab_size}")
+                        self.cfg.vocab_size = vocab_size
+                    # Store absolute path in config to be accessible in sample_text and elsewhere
+                    self.cfg.tokenizer_path = tok_path
+        except Exception as _exc:  # noqa: BLE001
+            # Non-blocking: fallback to configured vocab_size
+            pass
+
         self.data_module = SubtitleDataModule(cfg)
         self.model = TinyTransformerLM(cfg).to(self.device)
         self.model_summary = summarise_model(self.model)
@@ -771,6 +940,16 @@ class SubtitleTrainer:
         self.optimizer = torch.optim.AdamW(
             self.model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay
         )
+        # LR Scheduler: cosine annealing pour descente progressive
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer,
+            T_max=cfg.max_steps,
+            eta_min=cfg.lr * 0.1  # LR min = 10% du LR initial
+        )
+        # AMP (mixed precision) si CUDA
+        self.use_amp: bool = (self.device.type == "cuda") and bool(self.cfg.use_amp)
+        # Utiliser l'API torch.amp moderne pour éviter les avertissements
+        self.scaler = torch.amp.GradScaler("cuda", enabled=self.use_amp)
 
         self.resume_checkpoint_path: Optional[Path] = None
         if self.cfg.resume_checkpoint is not None:
@@ -783,7 +962,21 @@ class SubtitleTrainer:
         self.start_step = 0
         if self.resume_checkpoint_path is not None and self.resume_checkpoint_path.exists():
             print(f"[resume] Loading checkpoint from {self.resume_checkpoint_path}")
-            checkpoint = torch.load(self.resume_checkpoint_path, map_location=self.device)
+            # Try safe load first, fallback to unsafe for trusted local checkpoints
+            try:
+                import pathlib as _pl
+                if hasattr(torch, "serialization") and hasattr(torch.serialization, "add_safe_globals"):
+                    torch.serialization.add_safe_globals([_pl.PosixPath])
+            except Exception:
+                pass
+            try:
+                checkpoint = torch.load(self.resume_checkpoint_path, map_location=self.device, weights_only=True)
+            except (TypeError, Exception):
+                try:
+                    checkpoint = torch.load(self.resume_checkpoint_path, map_location=self.device, weights_only=False)
+                except TypeError:
+                    checkpoint = torch.load(self.resume_checkpoint_path, map_location=self.device)
+            
             model_state = checkpoint.get("model_state")
             if model_state is None:
                 raise ValueError("Checkpoint does not contain model_state")
@@ -931,8 +1124,9 @@ class SubtitleTrainer:
                 src = src.to(self.device)
                 tgt = tgt.to(self.device)
                 padding_mask = padding_mask.to(self.device)
-                logits = self.model(src, padding_mask=padding_mask)
-                loss = self.criterion(logits.view(-1, logits.size(-1)), tgt.view(-1))
+                with torch.amp.autocast(device_type="cuda", enabled=self.use_amp):
+                    logits = self.model(src, padding_mask=padding_mask)
+                    loss = self.criterion(logits.view(-1, logits.size(-1)), tgt.view(-1))
                 total_loss += loss.item()
                 seen += 1
                 if batch_idx + 1 >= self.cfg.eval_batches:
@@ -944,11 +1138,59 @@ class SubtitleTrainer:
         if self.cfg.sample_interval <= 0:
             return None
         prompt = self.cfg.sample_prompt or ""
+        was_training = self.model.training
+        self.model.eval()
+
+        # If using a tokenizer, sample in tokenizer ID space and decode with tokenizer
+        tokenizer = None
+        if self.cfg.tokenizer_path is not None:
+            tok_path = Path(self.cfg.tokenizer_path)
+            if tok_path.exists():
+                try:
+                    tokenizer = Tokenizer.from_file(str(tok_path))
+                except Exception:
+                    tokenizer = None
+
+        if tokenizer is not None:
+            try:
+                enc = tokenizer.encode(prompt if prompt else "\n")
+                init_ids = enc.ids or [0]
+            except Exception:
+                init_ids = [0]
+            tokens = torch.tensor(init_ids, dtype=torch.long, device=self.device).unsqueeze(0)
+            generated_ids: list[int] = []
+            with torch.no_grad():
+                for _ in range(max(self.cfg.sample_max_new_tokens, 0)):
+                    window = tokens[:, -self.cfg.block_size :]
+                    logits = self.model(window)
+                    logits = logits[:, -1, :] / max(self.cfg.sample_temperature, 1e-5)
+                    if 0 < self.cfg.sample_top_k < logits.size(-1):
+                        values, _ = torch.topk(logits, self.cfg.sample_top_k, dim=-1)
+                        cutoff = values[:, -1].unsqueeze(-1)
+                        logits = torch.where(
+                            logits < cutoff, torch.full_like(logits, float("-inf")), logits
+                        )
+                    probs = torch.softmax(logits, dim=-1)
+                    next_token = torch.multinomial(probs, num_samples=1)
+                    tokens = torch.cat([tokens, next_token], dim=1)
+                    generated_ids.append(int(next_token.item()))
+            full_ids = tokens.squeeze(0).tolist()
+            try:
+                full_text = tokenizer.decode(full_ids)
+            except Exception:
+                # Fallback: try decode only generated part
+                try:
+                    full_text = (tokenizer.decode(init_ids) or "") + (tokenizer.decode(generated_ids) or "")
+                except Exception:
+                    full_text = ""
+            if was_training:
+                self.model.train()
+            return full_text
+
+        # Fallback: byte-level sampling and decoding
         input_bytes = prompt.encode("utf-8") or b"\n"
         tokens = torch.tensor(list(input_bytes), dtype=torch.long, device=self.device).unsqueeze(0)
         generated: list[int] = []
-        was_training = self.model.training
-        self.model.eval()
         with torch.no_grad():
             for _ in range(max(self.cfg.sample_max_new_tokens, 0)):
                 window = tokens[:, -self.cfg.block_size :]
@@ -992,17 +1234,11 @@ class SubtitleTrainer:
     def run(self) -> None:
         self._prepare_logging()
         assert self.metrics_logger is not None
-
+        # Prepare data loaders from the data module (it handles memmap vs in-memory)
         train_loader = self.data_module.train_loader
         val_loader = self.data_module.val_loader
-
-        step = self.start_step
-        if step >= self.cfg.max_steps:
-            print(
-                f"[train] max_steps ({self.cfg.max_steps}) déjà atteints, aucune nouvelle étape exécutée."
-            )
-        if self.resume_checkpoint_path is not None and step < self.cfg.max_steps:
-            print(f"[resume] Poursuite de l'entraînement jusqu'à {self.cfg.max_steps} étapes")
+        step = int(self.start_step)
+        print(f"[train] Starting/Resuming training at step {step} aiming for {self.cfg.max_steps} steps")
         train_iter = iter(train_loader)
 
         try:
@@ -1022,12 +1258,21 @@ class SubtitleTrainer:
                 padding_mask = padding_mask.to(self.device)
 
                 self.optimizer.zero_grad(set_to_none=True)
-                logits = self.model(src, padding_mask=padding_mask)
-                loss = self.criterion(logits.view(-1, logits.size(-1)), tgt.view(-1))
-                loss.backward()
-                nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                self.optimizer.step()
+                with torch.amp.autocast(device_type="cuda", enabled=self.use_amp):
+                    logits = self.model(src, padding_mask=padding_mask)
+                    loss = self.criterion(logits.view(-1, logits.size(-1)), tgt.view(-1))
 
+                if self.use_amp:
+                    self.scaler.scale(loss).backward()
+                    nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                else:
+                    loss.backward()
+                    nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    self.optimizer.step()
+                
+                self.scheduler.step()
                 step += 1
                 train_loss = loss.item()
                 should_log_train = (
@@ -1083,6 +1328,25 @@ class SubtitleTrainer:
                         val_loss=val_loss,
                         run_dir=str(self.run_dir) if self.run_dir else None,
                     )
+
+                # Sauvegarde périodique des checkpoints
+                if (
+                    self.cfg.checkpoint_interval > 0
+                    and step % self.cfg.checkpoint_interval == 0
+                    and self.run_dir is not None
+                ):
+                    periodic_ckpt_path = self.run_dir / f"checkpoint_step_{step}.pt"
+                    checkpoint = {
+                        "config": self.cfg.__dict__,
+                        "model_state": self.model.state_dict(),
+                        "optimizer_state": self.optimizer.state_dict(),
+                        "step": step,
+                    }
+                    torch.save(checkpoint, periodic_ckpt_path)
+                    print(f"[checkpoint] Saved periodic checkpoint at step {step}: {periodic_ckpt_path}")
+                    # Mise à jour du checkpoint principal dans le run dir
+                    if self.run_checkpoint_path is not None:
+                        torch.save(checkpoint, self.run_checkpoint_path)
 
                 if self._should_stop():
                     print("[train] Stop signal received after sampling.")
@@ -1172,6 +1436,12 @@ def parse_args() -> Config:
         type=int,
         default=None,
         help="Taille du vocabulaire/tokenizer (défaut: 256)",
+    )
+    parser.add_argument(
+        "--tokenizer-path",
+        type=Path,
+        default=None,
+        help="Chemin vers un tokenizer HuggingFace (tokenizer.json). Si fourni, le vocab_size sera autodétecté",
     )
     parser.add_argument(
         "--num-heads",
@@ -1306,6 +1576,24 @@ def parse_args() -> Config:
         default=None,
         help="Répertoire de run existant à réutiliser pour journaux/échantillons",
     )
+    parser.add_argument(
+        "--memmap-path",
+        type=Path,
+        default=None,
+        help="Chemin d'un fichier memmap .bin (uint8) pour entraînement streaming",
+    )
+    parser.add_argument(
+        "--pretokenized-path",
+        type=Path,
+        default=None,
+        help="Chemin d'un corpus pré-tokenizé (.pt) contenant un tensor 1D de token IDs",
+    )
+    parser.add_argument(
+        "--checkpoint-interval",
+        type=int,
+        default=5000,
+        help="Intervalle (en steps) pour sauvegarder des checkpoints périodiques (0 = désactivé)",
+    )
     args = parser.parse_args()
 
     cfg = Config()
@@ -1325,6 +1613,8 @@ def parse_args() -> Config:
         cfg.embed_dim = args.embed_dim
     if args.vocab_size is not None:
         cfg.vocab_size = args.vocab_size
+    if args.tokenizer_path is not None:
+        cfg.tokenizer_path = args.tokenizer_path
     if args.num_heads is not None:
         cfg.num_heads = args.num_heads
     if args.num_layers is not None:
@@ -1369,6 +1659,12 @@ def parse_args() -> Config:
         cfg.resume_checkpoint = args.resume_checkpoint
     if args.resume_run_dir is not None:
         cfg.resume_run_dir = args.resume_run_dir
+    if args.memmap_path is not None:
+        cfg.memmap_path = args.memmap_path
+    if args.pretokenized_path is not None:
+        cfg.pretokenized_path = args.pretokenized_path
+    if hasattr(args, 'checkpoint_interval'):
+        cfg.checkpoint_interval = args.checkpoint_interval
     return cfg
 
 
