@@ -1,0 +1,82 @@
+version: '3.8'
+
+services:
+  # Backend Flask API for training control
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: french-llm-backend
+    command: python dashboard/server.py
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount data and models (for persistence)
+      - ./data_clean:/workspace/data_clean
+      - ./trained_models:/workspace/trained_models
+      # Mount scripts for live editing
+      - ./scripts:/workspace/scripts
+      - ./dashboard:/workspace/dashboard
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - llm-network
+
+  # Frontend React dashboard
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dashboard
+    container_name: french-llm-frontend
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./dashboard/web:/app
+      - /app/node_modules  # Prevent overwriting node_modules
+    depends_on:
+      - backend
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    networks:
+      - llm-network
+
+  # Training service (manual start)
+  training:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: french-llm-training
+    command: echo "Run 'docker-compose run training python scripts/train_subtitles_transformer.py --help' to see training options"
+    volumes:
+      - ./data_clean:/workspace/data_clean
+      - ./trained_models:/workspace/trained_models
+      - ./scripts:/workspace/scripts
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - llm-network
+    profiles:
+      - training  # Only start when explicitly requested
+
+networks:
+  llm-network:
+    driver: bridge
+
+volumes:
+  node_modules:

@@ -65,6 +65,11 @@ This project demonstrates the complete pipeline for training a medium-sized GPT 
 - Frontend: React + Vite
 - Real-time metrics, loss curves, sample generation
 
+**Deployment:**
+- Docker + Docker Compose
+- NVIDIA Container Toolkit for GPU support
+- Reproducible environment across systems
+
 **Hardware:**
 - GPU: NVIDIA RTX 5080 (16GB VRAM)
 - Training Time: ~2.5-3 hours for 60k steps
@@ -72,7 +77,32 @@ This project demonstrates the complete pipeline for training a medium-sized GPT 
 
 ### 🚀 Quick Start
 
-#### 1. Installation
+#### Option A: Docker (Recommended)
+
+**Simplest way to get started with reproducible environment:**
+
+```bash
+# Clone the repository
+git clone https://github.com/Vincent-PRO-AI/french-llm-from-scratch.git
+cd french-llm-from-scratch
+
+# Start dashboard
+docker-compose up -d backend frontend
+
+# Run training
+docker-compose run --rm training python scripts/train_subtitles_transformer.py \
+  --arch-preset medium \
+  --tokenizer-path trained_models/tokenizers/fineweb-32k/tokenizer.json \
+  --pretokenized-path data_clean/mixed_tokenized.pt \
+  --max-steps 60000 \
+  --batch-size 4
+
+# Access dashboard at http://localhost:5174
+```
+
+📖 **Full Docker guide:** See [DOCKER.md](DOCKER.md) for detailed instructions.
+
+#### Option B: Local Installation
 
 ```bash
 # Clone the repository
@@ -250,6 +280,23 @@ MIT License - See [LICENSE](LICENSE) for details.
 - OpenAssistant for conversation data
 - FineWeb team for high-quality web corpus
 
+### 🐳 Docker Support
+
+Full Docker support for easy deployment and reproducibility!
+
+**Quick Start:**
+```bash
+docker-compose up -d backend frontend
+docker-compose run --rm training python scripts/train_subtitles_transformer.py [options]
+```
+
+**See [DOCKER.md](DOCKER.md) for:**
+- Installation and setup
+- GPU configuration
+- Common commands
+- Troubleshooting
+- Production deployment
+
 ---
 
 ## Français
@@ -311,6 +358,11 @@ Ce projet démontre le pipeline complet pour entraîner un modèle GPT de taille
 - Frontend : React + Vite
 - Métriques temps réel, courbes de loss, génération d'échantillons
 
+**Déploiement :**
+- Docker + Docker Compose
+- NVIDIA Container Toolkit pour support GPU
+- Environnement reproductible sur tous systèmes
+
 **Hardware :**
 - GPU : NVIDIA RTX 5080 (16GB VRAM)
 - Temps d'entraînement : ~2,5-3 heures pour 60k steps
@@ -318,7 +370,32 @@ Ce projet démontre le pipeline complet pour entraîner un modèle GPT de taille
 
 ### 🚀 Démarrage rapide
 
-#### 1. Installation
+#### Option A : Docker (Recommandé)
+
+**Moyen le plus simple avec environnement reproductible :**
+
+```bash
+# Cloner le dépôt
+git clone https://github.com/Vincent-PRO-AI/french-llm-from-scratch.git
+cd french-llm-from-scratch
+
+# Démarrer le dashboard
+docker-compose up -d backend frontend
+
+# Lancer l'entraînement
+docker-compose run --rm training python scripts/train_subtitles_transformer.py \
+  --arch-preset medium \
+  --tokenizer-path trained_models/tokenizers/fineweb-32k/tokenizer.json \
+  --pretokenized-path data_clean/mixed_tokenized.pt \
+  --max-steps 60000 \
+  --batch-size 4
+
+# Accéder au dashboard : http://localhost:5174
+```
+
+📖 **Guide Docker complet :** Voir [DOCKER.md](DOCKER.md) pour les instructions détaillées.
+
+#### Option B : Installation locale
 
 ```bash
 # Cloner le dépôt
@@ -495,6 +572,23 @@ Licence MIT - Voir [LICENSE](LICENSE) pour les détails.
 - HuggingFace pour Tokenizers et Datasets
 - OpenAssistant pour les données de conversation
 - L'équipe FineWeb pour le corpus web de haute qualité
+
+### 🐳 Support Docker
+
+Support Docker complet pour un déploiement facile et reproductible !
+
+**Démarrage rapide :**
+```bash
+docker-compose up -d backend frontend
+docker-compose run --rm training python scripts/train_subtitles_transformer.py [options]
+```
+
+**Voir [DOCKER.md](DOCKER.md) pour :**
+- Installation et configuration
+- Configuration GPU
+- Commandes courantes
+- Résolution de problèmes
+- Déploiement en production
 
 ---
 

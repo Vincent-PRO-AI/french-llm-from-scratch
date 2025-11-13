@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+ENV/
+env/
+
+# Data (too large for image)
+data_clean/
+data/
+datasets/
+
+# Models (too large for image)
+trained_models/
+
+# Node
+dashboard/web/node_modules/
+dashboard/web/dist/
+dashboard/web/.vite/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+*.Zone.Identifier
+
+# Git
+.git/
+.gitignore
+
+# Logs
+*.log
+
+# Documentation (keep README)
+LINKEDIN_POST.md
+README_old.md
