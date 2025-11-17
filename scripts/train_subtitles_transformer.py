@@ -278,10 +278,27 @@ class SampleLogger:
             self.path = run_dir / "samples.txt"
             self._file = open(self.path, "a", encoding="utf-8", buffering=1)
 
+    @staticmethod
+    def _clean_text(sample: str) -> str:
+        if not isinstance(sample, str):
+            return ""
+        # Remplacer marqueurs ByteLevel-BPE et corriger mojibake
+        cleaned = (
+            sample.replace("\r\n", "\n")
+                  .replace("Ċ", "\n")
+                  .replace("Ġ", " ")
+                  .replace("Â«", "«")
+                  .replace("Â»", "»")
+        )
+        # Normaliser espaces consécutifs hors sauts de ligne
+        cleaned = "\n".join(" ".join(line.split()) for line in cleaned.splitlines())
+        return cleaned.strip()
+
     def log(self, step: int, sample: str) -> None:
         if self._file is None:
             return
-        flattened = sample.replace("\r\n", " ").replace("\n", " ")
+        cleaned = self._clean_text(sample)
+        flattened = cleaned.replace("\n", " ")
         self._file.write(f"step {step:04d}: {flattened}\n")
 
     def close(self) -> None:
@@ -1285,9 +1302,14 @@ class SubtitleTrainer:
                 if self.cfg.sample_interval > 0 and step % self.cfg.sample_interval == 0:
                     sample_text = self.sample_text()
                     if sample_text is not None:
+                        # Écrire un sample nettoyé dans le fichier et afficher un aperçu propre
                         if self.sample_logger is not None:
                             self.sample_logger.log(step, sample_text)
-                        preview = sample_text.replace("\n", " ")
+                        # Construire un aperçu console lisible (sans marqueurs BPE)
+                        try:
+                            preview = SampleLogger._clean_text(sample_text).replace("\n", " ")
+                        except Exception:
+                            preview = sample_text.replace("\n", " ")
                         if len(preview) > 200:
                             preview = preview[:197] + "..."
                         print(f"step {step:04d}: {preview}")
@@ -1306,11 +1328,18 @@ class SubtitleTrainer:
                     valid_positions = (~padding_mask[0]).nonzero(as_tuple=False)
                     tail_index = int(valid_positions[-1]) if valid_positions.numel() else -1
                     tail_logits = logits.detach()[0, tail_index, :].cpu()
+                    # Enregistrer aussi l'échantillon nettoyé dans les visuals, si présent
+                    vis_sample = None
+                    if sample_text is not None:
+                        try:
+                            vis_sample = SampleLogger._clean_text(sample_text)
+                        except Exception:
+                            vis_sample = sample_text
                     self.visual_logger.log(
                         step,
                         embeddings_snapshot,
                         tail_logits,
-                        sample=sample_text,
+                        sample=vis_sample,
                     )
 
                 if self._should_stop():

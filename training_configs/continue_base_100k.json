@@ -1,0 +1,20 @@
+{
+  "name": "Continue Base Model to 100k",
+  "description": "Reprendre l'entraînement du base model de 60k à 100k steps avec mixed_tokenized.pt",
+  "run": "french_medium_50k",
+  "checkpoint": "checkpoint_step_60000.pt",
+  "max_steps": 100000,
+  "config": {
+    "arch_preset": "medium",
+    "pretokenized_path": "data_clean/mixed_tokenized.pt",
+    "tokenizer_path": "trained_models/tokenizers/fineweb-32k/tokenizer.json",
+    "max_steps": 100000,
+    "batch_size": 4,
+    "lr": 5e-6,
+    "checkpoint_interval": 5000,
+    "device": "cuda",
+    "sample_prompt": "Bonjour je suis ",
+    "run_name": "french_medium_100k",
+    "log_dir": "trained_models/runs"
+  }
+}

@@ -19,9 +19,12 @@ def clean_bpe_artifacts(text):
 if __name__ == '__main__':
     torch.serialization.add_safe_globals([pathlib.PosixPath])
     
-    checkpoint_path = 'trained_models/runs/french_medium_50k/checkpoint.pt'
+    checkpoint_path = 'trained_models/runs/french_medium_base_60k/checkpoint_step_100000.pt'
     print(f'Chargement: {checkpoint_path}')
-    checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
+    try:
+        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
+    except Exception:
+        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
     
     print(f"\n📊 Modèle: {checkpoint['config']['arch_preset']} "
           f"({checkpoint['config']['num_layers']}L, {checkpoint['config']['num_heads']}H, "

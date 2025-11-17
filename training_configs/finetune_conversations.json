@@ -1,0 +1,19 @@
+{
+  "comment": "Fine-tuning du modèle base 100k sur conversations (6.4M + nouvelles données)",
+  "arch_preset": "medium",
+  "resume_checkpoint": "trained_models/runs/french_medium_base_60k/checkpoint_step_100000.pt",
+  "resume_run_dir": "trained_models/runs/french_medium_finetune_conversations",
+  "pretokenized_path": "data_clean/conversations_combined_tokenized.pt",
+  "tokenizer_path": "trained_models/tokenizers/fineweb-32k/tokenizer.json",
+  "max_steps": 115000,
+  "batch_size": 4,
+  "lr": 3e-6,
+  "checkpoint_interval": 2500,
+  "sample_interval": 250,
+  "sample_prompt": "Utilisateur: Bonjour, comment vas-tu ?\nAssistant:",
+  "sample_max_new_tokens": 150,
+  "sample_temperature": 0.85,
+  "run_name": "french_medium_finetune_conversations",
+  "device": "cuda",
+  "use_amp": true
+}
