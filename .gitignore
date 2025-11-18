@@ -15,3 +15,18 @@ trained_models/
 # Legacy raw subtitle dumps (deprecated layout)
 youtube-subtitile/
 youtube-subtitile-plain/
+
+# Documents personnels et notes (locaux uniquement)
+LINKEDIN_POST*.md
+CONSEILS_*.md
+POST_LINKEDIN*.txt
+GUIDE_*.md
+README_old.md
+*.log
+monitor.out
+test_comparison_output.txt
+test_with_tokenizer.txt
+
+# VSCode et environnement local
+.vscode/
+.venv/

@@ -1,4 +1,4 @@
-#!/bin/bash
+ash
 # Pipeline complet: tokeniser → combiner → lancer fine-tuning
 
 set -e

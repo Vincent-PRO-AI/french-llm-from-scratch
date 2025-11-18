@@ -1222,11 +1222,14 @@ class SubtitleTrainer:
                 probs = torch.softmax(logits, dim=-1)
                 next_token = torch.multinomial(probs, num_samples=1)
                 tokens = torch.cat([tokens, next_token], dim=1)
-                generated.append(int(next_token.item()))
+                token_val = int(next_token.item())
+                # Clip token values to valid byte range (0-255)
+                if token_val < 256:
+                    generated.append(token_val)
         if was_training:
             self.model.train()
-        new_text = bytes(generated).decode("utf-8", errors="ignore")
-        full_text = (input_bytes + bytes(generated)).decode("utf-8", errors="ignore")
+        new_text = bytes(generated).decode("utf-8", errors="ignore") if generated else ""
+        full_text = (input_bytes + bytes(generated)).decode("utf-8", errors="ignore") if generated else input_bytes.decode("utf-8", errors="ignore")
         return full_text
 
     def _finalise_metadata(self, completed_steps: int) -> None:
