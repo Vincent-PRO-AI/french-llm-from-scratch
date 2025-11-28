@@ -399,7 +399,7 @@ docker-compose run --rm training python scripts/train_subtitles_transformer.py [
 Ce projet démontre le pipeline complet pour entraîner un modèle GPT de taille moyenne pour le français depuis zéro, fonctionnant entièrement sur du matériel grand public (RTX 5080, 16GB VRAM).
 
 **Réalisations clés :**
-- ✅ Modèle de 260M paramètres entraîné jusqu'à 100k steps sur corpus français diversifié
+- ✅ Modèle de 260M paramètres entraîné jusqu'à 200k steps sur corpus français diversifié
 - ✅ Fine-tuning sur 15M tokens de conversations (115k steps total, +15k pour conversations)
 - ✅ Pipeline automatisé de données conversationnelles (WildChat, LMSYS, OpenHermes)
 - ✅ Dashboard web personnalisé pour le monitoring en temps réel
