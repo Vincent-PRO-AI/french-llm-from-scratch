@@ -393,7 +393,7 @@ MIT License - Utilisation libre pour recherche et production.
   title = {{French LLM From Scratch - 260M with Fineweb-32k Tokenizer}},
   year = {{2025}},
   publisher = {{Hugging Face}},
-  howpublished = {{\\url{{https://huggingface.co/Vincent-PRO-AI/french-llm-from-scratch}}}}
+  howpublished = {{\\\\url{{https://huggingface.co/Vincent-PRO-AI/french-llm-from-scratch}}}}
 }}
 ```
 
@@ -404,7 +404,7 @@ MIT License - Utilisation libre pour recherche et production.
 
 ---
 
-*Modèle entraîné between {started_at[:10]} et {ended_at[:10]}*
+*Modèle entraîné du {started_at[:10]} au {ended_at[:10]}*
 """
         
         readme_file = self.output_dir / "README.md"

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>French LLM - Chat Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 800px;
+            width: 100%;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f7f7f7;
+        }
+        .message {
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            text-align: right;
+        }
+        .message-content {
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: 12px;
+            max-width: 70%;
+            word-wrap: break-word;
+        }
+        .message.user .message-content {
+            background: #667eea;
+            color: white;
+        }
+        .message.assistant .message-content {
+            background: white;
+            color: #333;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .message.system .message-content {
+            background: #fffbcc;
+            color: #666;
+            font-size: 13px;
+            font-style: italic;
+        }
+        .input-area {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+        .input-form {
+            display: flex;
+            gap: 10px;
+        }
+        .input-form input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 24px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-form input:focus {
+            border-color: #667eea;
+        }
+        .input-form button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 24px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .input-form button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        .input-form button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .settings {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .setting-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .setting-group label {
+            font-size: 13px;
+            color: #666;
+            font-weight: 500;
+        }
+        .setting-group input[type="number"],
+        .setting-group input[type="range"] {
+            padding: 6px 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 13px;
+            width: 70px;
+        }
+        .setting-group input[type="range"] {
+            width: 100px;
+        }
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🇫🇷 French LLM Chat</h1>
+            <p>Modèle de langage français entraîné from scratch (260M params)</p>
+        </div>
+        
+        <div class="chat-container" id="chatContainer">
+            <div class="message system">
+                <div class="message-content">
+                    👋 Bienvenue ! Pose une question ou envoie un prompt en français.
+                </div>
+            </div>
+        </div>
+        
+        <div class="input-area">
+            <div class="settings">
+                <div class="setting-group">
+                    <label for="maxTokens">Max tokens:</label>
+                    <input type="number" id="maxTokens" value="128" min="10" max="512">
+                </div>
+                <div class="setting-group">
+                    <label for="temperature">Temperature:</label>
+                    <input type="range" id="temperature" value="0.8" min="0.1" max="2.0" step="0.1">
+                    <span id="tempValue">0.8</span>
+                </div>
+                <div class="setting-group">
+                    <label for="topK">Top-K:</label>
+                    <input type="number" id="topK" value="40" min="1" max="100">
+                </div>
+            </div>
+            
+            <form class="input-form" id="chatForm">
+                <input 
+                    type="text" 
+                    id="userInput" 
+                    placeholder="Écris ton message ici..." 
+                    autocomplete="off"
+                    required
+                >
+                <button type="submit" id="sendBtn">Envoyer</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const chatContainer = document.getElementById('chatContainer');
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const sendBtn = document.getElementById('sendBtn');
+        const maxTokensInput = document.getElementById('maxTokens');
+        const temperatureInput = document.getElementById('temperature');
+        const topKInput = document.getElementById('topK');
+        const tempValue = document.getElementById('tempValue');
+
+        temperatureInput.addEventListener('input', (e) => {
+            tempValue.textContent = e.target.value;
+        });
+
+        function addMessage(content, type = 'assistant') {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = content;
+            
+            messageDiv.appendChild(contentDiv);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function generateText(prompt) {
+            const apiUrl = window.location.origin + '/generate';
+            
+            const requestBody = {
+                prompt: prompt,
+                max_new_tokens: parseInt(maxTokensInput.value),
+                temperature: parseFloat(temperatureInput.value),
+                top_k: parseInt(topKInput.value)
+            };
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(requestBody)
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Erreur lors de la génération');
+            }
+
+            return await response.json();
+        }
+
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const prompt = userInput.value.trim();
+            if (!prompt) return;
+
+            // Add user message
+            addMessage(prompt, 'user');
+            userInput.value = '';
+            
+            // Disable input
+            sendBtn.disabled = true;
+            sendBtn.innerHTML = '<span class="loader"></span>';
+            userInput.disabled = true;
+
+            try {
+                const result = await generateText(prompt);
+                addMessage(result.text, 'assistant');
+            } catch (error) {
+                addMessage(`❌ Erreur: ${error.message}`, 'system');
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Envoyer';
+                userInput.disabled = false;
+                userInput.focus();
+            }
+        });
+
+        // Focus input on load
+        userInput.focus();
+    </script>
+</body>
+</html>

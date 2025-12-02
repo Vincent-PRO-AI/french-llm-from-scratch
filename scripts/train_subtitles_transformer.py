@@ -175,6 +175,12 @@ class Config:
     use_amp: bool = True
     # Intervalle pour sauvegarder des checkpoints périodiques (0 = désactivé)
     checkpoint_interval: int = 5000
+    # DataLoader params (adaptés selon la RAM)
+    num_workers: int = 4
+    pin_memory: bool = True
+    prefetch_factor: int = 4
+    persistent_workers: bool = True
+    auto_ram_tune: bool = True
 
 
 def _coerce_value(example: Any, value: Any) -> Any:
@@ -480,25 +486,46 @@ class SubtitleCorpus:
         byte-level encoding.
         """
         if self.tokenizer_path is not None and self.tokenizer_path.exists():
-            # Use tokenizer to produce token ids
-            tokenizer = Tokenizer.from_file(str(self.tokenizer_path))
-            all_ids: list[int] = []
-            docs = self.load_documents()
-            for doc in docs:
+            # Try transformers tokenizer first (for Mistral, etc.)
+            try:
+                from transformers import AutoTokenizer
+                tokenizer = AutoTokenizer.from_pretrained(str(self.tokenizer_path))
+                all_ids: list[int] = []
+                docs = self.load_documents()
+                for doc in docs:
+                    try:
+                        enc = tokenizer.encode(doc, add_special_tokens=False)
+                        all_ids.extend(enc)
+                        # add a sentinel between documents
+                        all_ids.append(tokenizer.eos_token_id or 0)
+                    except Exception:
+                        # Fallback: simple split by whitespace
+                        all_ids.extend([0] * len(doc.split()))
+                if not all_ids:
+                    raise RuntimeError("Transformers tokenizer produced no token ids for corpus.")
+                return torch.tensor(all_ids, dtype=torch.long)
+            except Exception:
+                # Fallback to tokenizers library
                 try:
-                    enc = tokenizer.encode(doc)
-                    ids = enc.ids
+                    tokenizer = Tokenizer.from_file(str(self.tokenizer_path))
+                    all_ids: list[int] = []
+                    docs = self.load_documents()
+                    for doc in docs:
+                        try:
+                            enc = tokenizer.encode(doc)
+                            ids = enc.ids
+                        except Exception:
+                            ids = []
+                        if ids:
+                            all_ids.extend(ids)
+                            # add a sentinel between documents to separate
+                            sep_id = tokenizer.token_to_id('[SEP]') or tokenizer.token_to_id('<sep>') or 0
+                            all_ids.append(sep_id)
+                    if not all_ids:
+                        raise RuntimeError("Tokenizer produced no token ids for corpus.")
+                    return torch.tensor(all_ids, dtype=torch.long)
                 except Exception:
-                    # Fallback: simple split by whitespace and encode nothing
-                    ids = []
-                if ids:
-                    all_ids.extend(ids)
-                    # add a sentinel between documents to separate
-                    sep_id = tokenizer.token_to_id('[SEP]') or tokenizer.token_to_id('<sep>') or 0
-                    all_ids.append(sep_id)
-            if not all_ids:
-                raise RuntimeError("Tokenizer produced no token ids for corpus.")
-            return torch.tensor(all_ids, dtype=torch.long)
+                    pass
 
         # Fallback: byte-level
         corpus_bytes = self.to_bytes()
@@ -790,6 +817,10 @@ class SubtitleDataModule:
             shuffle=True,
             drop_last=True,
             collate_fn=self._collate_batch,
+            num_workers=self.cfg.num_workers,
+            pin_memory=self.cfg.pin_memory,
+            prefetch_factor=self.cfg.prefetch_factor if self.cfg.num_workers > 0 else None,
+            persistent_workers=self.cfg.persistent_workers if self.cfg.num_workers > 0 else False,
         )
         self._val_loader = DataLoader(
             val_ds,
@@ -797,6 +828,10 @@ class SubtitleDataModule:
             shuffle=False,
             drop_last=True,
             collate_fn=self._collate_batch,
+            num_workers=max(1, self.cfg.num_workers // 2),
+            pin_memory=self.cfg.pin_memory,
+            prefetch_factor=self.cfg.prefetch_factor if self.cfg.num_workers > 0 else None,
+            persistent_workers=self.cfg.persistent_workers if self.cfg.num_workers > 0 else False,
         )
 
     @property
@@ -935,12 +970,19 @@ class SubtitleTrainer:
                 if not tok_path.is_absolute():
                     tok_path = ROOT / tok_path
                 if tok_path.exists():
+                    # Try transformers tokenizer first
                     try:
-                        tokenizer = Tokenizer.from_file(str(tok_path))
-                        vocab = getattr(tokenizer, "get_vocab_size", None)
-                        vocab_size = int(vocab()) if callable(vocab) else None
+                        from transformers import AutoTokenizer
+                        tokenizer = AutoTokenizer.from_pretrained(str(tok_path))
+                        vocab_size = len(tokenizer)
                     except Exception:
-                        vocab_size = None
+                        # Fallback to tokenizers library
+                        try:
+                            tokenizer = Tokenizer.from_file(str(tok_path))
+                            vocab = getattr(tokenizer, "get_vocab_size", None)
+                            vocab_size = int(vocab()) if callable(vocab) else None
+                        except Exception:
+                            vocab_size = None
                     if vocab_size and vocab_size != self.cfg.vocab_size:
                         print(f"[tokenizer] Override vocab_size: {self.cfg.vocab_size} -> {vocab_size}")
                         self.cfg.vocab_size = vocab_size
@@ -950,6 +992,30 @@ class SubtitleTrainer:
             # Non-blocking: fallback to configured vocab_size
             pass
 
+        # Ajustement automatique DataLoader selon RAM
+        if cfg.auto_ram_tune:
+            try:
+                import os
+                ram_kb = 0
+                with open('/proc/meminfo','r') as f:
+                    for line in f:
+                        if line.startswith('MemTotal:'):
+                            ram_kb = int(line.split()[1])
+                            break
+                ram_gb = ram_kb / (1024*1024)
+                # Heuristiques simples
+                if ram_gb >= 64:
+                    cfg.num_workers = max(cfg.num_workers, 8)
+                    cfg.prefetch_factor = max(cfg.prefetch_factor, 6)
+                    cfg.persistent_workers = True
+                elif ram_gb >= 32:
+                    cfg.num_workers = max(cfg.num_workers, 6)
+                    cfg.prefetch_factor = max(cfg.prefetch_factor, 4)
+                else:
+                    cfg.num_workers = max(cfg.num_workers, 4)
+                    cfg.prefetch_factor = max(cfg.prefetch_factor, 2)
+            except Exception:
+                pass
         self.data_module = SubtitleDataModule(cfg)
         self.model = TinyTransformerLM(cfg).to(self.device)
         self.model_summary = summarise_model(self.model)
@@ -1163,18 +1229,30 @@ class SubtitleTrainer:
         if self.cfg.tokenizer_path is not None:
             tok_path = Path(self.cfg.tokenizer_path)
             if tok_path.exists():
+                # Try transformers tokenizer first
                 try:
-                    tokenizer = Tokenizer.from_file(str(tok_path))
+                    from transformers import AutoTokenizer
+                    tokenizer = AutoTokenizer.from_pretrained(str(tok_path))
                 except Exception:
-                    tokenizer = None
+                    # Fallback to tokenizers library
+                    try:
+                        tokenizer = Tokenizer.from_file(str(tok_path))
+                    except Exception:
+                        tokenizer = None
 
         if tokenizer is not None:
             try:
-                enc = tokenizer.encode(prompt if prompt else "\n")
-                init_ids = enc.ids or [0]
+                enc = tokenizer.encode(prompt if prompt else "\n", add_special_tokens=False)
+                init_ids = enc or [tokenizer.bos_token_id or 0]
             except Exception:
-                init_ids = [0]
-            tokens = torch.tensor(init_ids, dtype=torch.long, device=self.device).unsqueeze(0)
+                init_ids = [tokenizer.bos_token_id or 0]
+            # tokenizers>=0.14 renvoie un objet Encoding pour encode();
+            # assurez-vous d'extraire la liste d'ids avant de construire le tenseur
+            try:
+                ids = init_ids.ids if hasattr(init_ids, 'ids') else init_ids
+            except Exception:
+                ids = init_ids
+            tokens = torch.tensor(ids, dtype=torch.long, device=self.device).unsqueeze(0)
             generated_ids: list[int] = []
             with torch.no_grad():
                 for _ in range(max(self.cfg.sample_max_new_tokens, 0)):
@@ -1193,11 +1271,11 @@ class SubtitleTrainer:
                     generated_ids.append(int(next_token.item()))
             full_ids = tokens.squeeze(0).tolist()
             try:
-                full_text = tokenizer.decode(full_ids)
+                full_text = tokenizer.decode(full_ids, skip_special_tokens=True)
             except Exception:
                 # Fallback: try decode only generated part
                 try:
-                    full_text = (tokenizer.decode(init_ids) or "") + (tokenizer.decode(generated_ids) or "")
+                    full_text = (tokenizer.decode(init_ids, skip_special_tokens=True) or "") + (tokenizer.decode(generated_ids, skip_special_tokens=True) or "")
                 except Exception:
                     full_text = ""
             if was_training:
@@ -1417,7 +1495,7 @@ class SubtitleTrainer:
 
 
 def parse_args() -> Config:
-    parser = argparse.ArgumentParser(description="Train a tiny Transformer on subtitle transcripts")
+    parser = argparse.ArgumentParser(description="Train a tiny Transformer sur corpus (adaptation RAM auto)")
     parser.add_argument(
         "--arch-preset",
         type=str,
@@ -1626,6 +1704,33 @@ def parse_args() -> Config:
         default=5000,
         help="Intervalle (en steps) pour sauvegarder des checkpoints périodiques (0 = désactivé)",
     )
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=None,
+        help="Workers DataLoader (auto si None)",
+    )
+    parser.add_argument(
+        "--no-pin-memory",
+        action="store_true",
+        help="Désactiver pin_memory (par défaut actif)",
+    )
+    parser.add_argument(
+        "--prefetch-factor",
+        type=int,
+        default=None,
+        help="prefetch_factor DataLoader (auto si None)",
+    )
+    parser.add_argument(
+        "--no-persistent-workers",
+        action="store_true",
+        help="Désactiver persistent_workers",
+    )
+    parser.add_argument(
+        "--no-auto-ram-tune",
+        action="store_true",
+        help="Désactiver l'ajustement automatique selon la RAM système",
+    )
     args = parser.parse_args()
 
     cfg = Config()
@@ -1697,6 +1802,17 @@ def parse_args() -> Config:
         cfg.pretokenized_path = args.pretokenized_path
     if hasattr(args, 'checkpoint_interval'):
         cfg.checkpoint_interval = args.checkpoint_interval
+    # DataLoader params
+    if args.num_workers is not None:
+        cfg.num_workers = max(0, args.num_workers)
+    if args.prefetch_factor is not None:
+        cfg.prefetch_factor = max(1, args.prefetch_factor)
+    if args.no_pin_memory:
+        cfg.pin_memory = False
+    if args.no_persistent_workers:
+        cfg.persistent_workers = False
+    if args.no_auto_ram_tune:
+        cfg.auto_ram_tune = False
     return cfg
 
 

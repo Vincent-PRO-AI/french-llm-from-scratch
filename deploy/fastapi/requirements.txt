@@ -1,0 +1,6 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+transformers==4.57.1
+safetensors==0.6.2
+# torch CPU (GPU non requis pour 260M)
+torch==2.9.0

@@ -7,7 +7,7 @@ echo "=================================================="
 echo "🔧 TOKENISATION DES CONVERSATIONS MASSIVES"
 echo "=================================================="
 
-TOKENIZER="trained_models/tokenizers/fineweb-32k/tokenizer.json"
+TOKENIZER="trained_models/tokenizers/fineweb-32k/tokenizer.json" b                                                                                                                                                                                                                                           
 INPUT_DIR="data_clean/conversations_massive"
 OUTPUT_BASE="data_clean"
 
