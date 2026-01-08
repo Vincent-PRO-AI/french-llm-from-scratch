@@ -44,3 +44,4 @@ POST_LINKEDIN*.txt
 !requirements.txt
 !CMakeLists.txt
 !LICENSE
+*.pid
