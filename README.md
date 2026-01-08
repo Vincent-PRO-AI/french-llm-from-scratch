@@ -2,6 +2,8 @@
 
 > Training a French GPT model from scratch on local hardware with full monitoring, periodic checkpoints, and conversational fine-tuning.
 
+🔗 **Hugging Face Model:** [vincent-pro-ai/french-llm-from-scratch](https://huggingface.co/vincent-pro-ai/french-llm-from-scratch)
+
 [English](#english) | [Français](#français)
 
 ---
