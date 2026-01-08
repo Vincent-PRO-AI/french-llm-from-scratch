@@ -34,10 +34,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files
 COPY scripts/ ./scripts/
 COPY dashboard/ ./dashboard/
-    # COPY finetune_conversations.py .
-    # Optional test files not present in this workspace
-    # COPY test_chat_model.py .
-    # COPY test_model_samples.py .
+# COPY finetune_conversations.py .
+# Optional test files not present in this workspace
+# COPY test_chat_model.py .
+# COPY test_model_samples.py .
 COPY Makefile .
 COPY README.md .
 
