@@ -1,0 +1,125 @@
+{
+  "timestamp": "2025-12-21T01:35:13.049402",
+  "test_cases": [
+    {
+      "id": 1,
+      "category": "greetings",
+      "prompt": "Bonjour, comment allez-vous?",
+      "expected_topics": [
+        "greeting",
+        "politeness",
+        "French"
+      ],
+      "description": "Test de réponse aux salutations"
+    },
+    {
+      "id": 2,
+      "category": "knowledge",
+      "prompt": "Quelle est la capitale de la France?",
+      "expected_topics": [
+        "Paris",
+        "France",
+        "capital"
+      ],
+      "description": "Test de connaissances factuelles"
+    },
+    {
+      "id": 3,
+      "category": "reasoning",
+      "prompt": "Expliquez pourquoi les langues changent avec le temps.",
+      "expected_topics": [
+        "language",
+        "evolution",
+        "culture",
+        "time"
+      ],
+      "description": "Test de capacités de raisonnement"
+    },
+    {
+      "id": 4,
+      "category": "creative",
+      "prompt": "Écrivez un court poème sur l'automne.",
+      "expected_topics": [
+        "automne",
+        "nature",
+        "saison",
+        "sentiment"
+      ],
+      "description": "Test de capacité créative"
+    },
+    {
+      "id": 5,
+      "category": "french_language",
+      "prompt": "Corrigez cette phrase: \"Je suis allé à l'école hier matin\"",
+      "expected_topics": [
+        "grammaire",
+        "correction",
+        "français"
+      ],
+      "description": "Test de maîtrise du français"
+    },
+    {
+      "id": 6,
+      "category": "technical",
+      "prompt": "Comment fonctionnent les transformers en apprentissage automatique?",
+      "expected_topics": [
+        "transformers",
+        "attention",
+        "deep learning",
+        "NLP"
+      ],
+      "description": "Test de connaissances techniques"
+    },
+    {
+      "id": 7,
+      "category": "context",
+      "prompt": "Si on apprend une nouvelle langue, quel est le meilleur moyen?",
+      "expected_topics": [
+        "apprentissage",
+        "langue",
+        "pratique",
+        "immersion"
+      ],
+      "description": "Test de pertinence contextuelle"
+    },
+    {
+      "id": 8,
+      "category": "logic",
+      "prompt": "Si tous les humains sont mortels et Socrate est humain, que peut-on conclure?",
+      "expected_topics": [
+        "logique",
+        "Socrate",
+        "mortalité",
+        "conclusion"
+      ],
+      "description": "Test de logique formelle"
+    }
+  ],
+  "evaluation_criteria": {
+    "fluency": {
+      "description": "Fluidité et naturalité du français généré",
+      "scale": "0-10"
+    },
+    "relevance": {
+      "description": "Pertinence par rapport à la question",
+      "scale": "0-10"
+    },
+    "coherence": {
+      "description": "Cohérence logique et structure",
+      "scale": "0-10"
+    },
+    "factuality": {
+      "description": "Exactitude des faits (le cas échéant)",
+      "scale": "0-10"
+    },
+    "length": {
+      "description": "Longueur appropriée de la réponse",
+      "scale": "0-10"
+    }
+  },
+  "metrics": {
+    "total_test_cases": 8,
+    "categories": 8,
+    "target_average_score": 7.5
+  }
+}

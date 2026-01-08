@@ -1,0 +1,39 @@
+{
+  "timestamp": "2025-12-21T01:56:23.838787",
+  "ram_current": 92.677484544,
+  "ram_available": 81.299656704,
+  "recommended_batch_size": 56,
+  "recommended_speedup": "8-9x",
+  "configs": {
+    "conservative": {
+      "name": "Conservative (S\u00fbr)",
+      "batch_size": 48,
+      "gradient_accumulation": 1,
+      "ram_available": 70,
+      "estimated_ram_usage": 55,
+      "speedup": "7-8x",
+      "steps_per_sec": 14,
+      "notes": "Tr\u00e8s stable, pas de risque OOM"
+    },
+    "recommended": {
+      "name": "Recommended (OPTIMAL) \u2b50",
+      "batch_size": 56,
+      "gradient_accumulation": 1,
+      "ram_available": 70,
+      "estimated_ram_usage": 62,
+      "speedup": "8-9x",
+      "steps_per_sec": 16,
+      "notes": "\u00c9quilibre performance/s\u00e9curit\u00e9"
+    },
+    "aggressive": {
+      "name": "Aggressive (Max Performance)",
+      "batch_size": 64,
+      "gradient_accumulation": 1,
+      "ram_available": 70,
+      "estimated_ram_usage": 68,
+      "speedup": "9-10x",
+      "steps_per_sec": 18,
+      "notes": "Utilisation optimale, risque mod\u00e9r\u00e9"
+    }
+  }
+}

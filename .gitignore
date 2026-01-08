@@ -1,32 +1,46 @@
 *.Zone.Identifier
 __pycache__/
+*.pyc
 
-# Raw data exports (YouTube, LinkedIn, Instagram, etc.)
+# Data
 data/
 !data/README.md
-
-# Cleaned corpora used for training/tokenizer
 data_clean/
 !data_clean/README.md
 
-# Model artefacts (checkpoints, tokenizers, run logs)
+# Models & Artifacts
 trained_models/
+models/
+model-store/
+minimal_french_model/
+*.pt
+*.bin
+*.safetensors
+*.gguf
+*.pth
 
-# Legacy raw subtitle dumps (deprecated layout)
-youtube-subtitile/
-youtube-subtitile-plain/
+# Logs & Temp
+*.log
+monitor.out
+*.jsonl
+*.tmp
+debug_ckpt.py
+EVAL_RESULTS.json
+EVAL_SAMPLES.txt
+api_simple.py
 
-# Documents personnels et notes (locaux uniquement)
+# Env
+.vscode/
+.venv/
+venv/
+env/
+
+# Personal
 LINKEDIN_POST*.md
 CONSEILS_*.md
 POST_LINKEDIN*.txt
-GUIDE_*.md
-README_old.md
-*.log
-monitor.out
-test_comparison_output.txt
-test_with_tokenizer.txt
 
-# VSCode et environnement local
-.vscode/
-.venv/
+# Keep these
+!requirements.txt
+!CMakeLists.txt
+!LICENSE

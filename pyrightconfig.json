@@ -1,0 +1,9 @@
+{
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "none",
+  "exclude": [
+    "generate_samples_250k.py",
+    "test_inference_250k.py",
+    "scripts/train_subtitles_transformer_ddp.py"
+  ]
+}

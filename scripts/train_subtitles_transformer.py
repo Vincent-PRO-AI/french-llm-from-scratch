@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from tokenizers import Tokenizer
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, Optional, Sequence, Set
+from typing import Any, Callable, Dict, Optional, Sequence, Set, cast
 
 import torch
 from torch import nn
@@ -76,6 +76,23 @@ MODEL_ARCH_PRESETS: dict[str, dict[str, int | float]] = {
         "sample_max_new_tokens": 120,
         "sample_temperature": 0.9,
     },
+    "large": {
+        "num_layers": 24,
+        "num_heads": 20,
+        "embed_dim": 1_280,
+        "ff_hidden_dim": 5_120,
+        "block_size": 1_024,
+        "vocab_size": 32_000,
+        "batch_size": 24,
+        "max_steps": 500_000,
+        "lr": 1.5e-4,
+        "eval_interval": 250,
+        "eval_batches": 20,
+        "metrics_log_fraction": 0.02,
+        "sample_interval": 500,
+        "sample_max_new_tokens": 200,
+        "sample_temperature": 0.9,
+    },
 }
 
 # Backward compat aliases for legacy preset names
@@ -135,6 +152,8 @@ def auto_device(request: str) -> torch.device:
 @dataclass
 class Config:
     data_dir: Path = DEFAULT_DATA_DIR
+    model_arch: str = "auto"  # auto|tiny|gpt
+    shuffle: bool = True
     block_size: int = 256
     min_seq_len: int = 0
     batch_size: int = 16
@@ -181,6 +200,16 @@ class Config:
     prefetch_factor: int = 4
     persistent_workers: bool = True
     auto_ram_tune: bool = True
+    # Gradient accumulation for effective larger batch sizes
+    gradient_accumulation_steps: int = 1
+    # CPU offload pour réduire VRAM
+    cpu_offload: bool = False
+    # Gradient checkpointing pour économiser mémoire
+    gradient_checkpointing: bool = False
+    # NVMe cache path pour spilling
+    nvme_cache_path: Optional[Path] = None
+    # Auto-detect resources and adjust batch size
+    auto_resource_adapt: bool = True
 
 
 def _coerce_value(example: Any, value: Any) -> Any:
@@ -486,6 +515,29 @@ class SubtitleCorpus:
         byte-level encoding.
         """
         if self.tokenizer_path is not None and self.tokenizer_path.exists():
+            # Try SentencePiece first (for Vincent tokenizer)
+            if str(self.tokenizer_path).endswith('.model'):
+                try:
+                    from scripts.sentencepiece_wrapper import SentencePieceWrapper
+                    tokenizer = SentencePieceWrapper(str(self.tokenizer_path))
+                    all_ids: list[int] = []
+                    docs = self.load_documents()
+                    for doc in docs:
+                        try:
+                            enc = tokenizer.encode(doc, add_special_tokens=False)
+                            all_ids.extend(enc)
+                            # add a sentinel between documents
+                            all_ids.append(tokenizer.eos_token_id or 1)
+                        except Exception:
+                            # Fallback: simple split by whitespace
+                            all_ids.extend([0] * len(doc.split()))
+                    if not all_ids:
+                        raise RuntimeError("SentencePiece tokenizer produced no token ids for corpus.")
+                    return torch.tensor(all_ids, dtype=torch.long)
+                except Exception as e:
+                    print(f"SentencePiece failed: {e}")
+                    pass
+
             # Try transformers tokenizer first (for Mistral, etc.)
             try:
                 from transformers import AutoTokenizer
@@ -603,7 +655,7 @@ class MemmapByteDataset(Dataset):
             span = max(1, (self.end - self.start) - (self.block_size + 1))
             base = self.start + (idx % span)
             hi = base + self.block_size + 1
-        chunk_np = np.asarray(self.mmap[base:hi], dtype=np.uint8)
+        chunk_np = np.asarray(self.mmap[base:hi], dtype=self.mmap.dtype)
         max_len = int(chunk_np.shape[0] - 1)
         if max_len < self.min_seq_len:
             # Fallback: take the maximum available length
@@ -640,7 +692,9 @@ class PositionalEncoding(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         seq_len = x.size(1)
-        return x + self.pos_encoding[:, :seq_len]
+        # pos_encoding est un buffer Tensor; castez pour satisfaire l’analyse statique
+        pos_enc = cast(torch.Tensor, getattr(self, "pos_encoding"))
+        return x + pos_enc[:, :seq_len]
 
 
 class TinyTransformerLM(nn.Module):
@@ -689,7 +743,8 @@ class TinyTransformerLM(nn.Module):
         x = self.tok_embed(tokens)
         x = self.pos_encoding(x)
         seq_len = tokens.size(1)
-        mask = self.causal_mask[:seq_len, :seq_len].to(tokens.device)
+        causal = cast(torch.Tensor, getattr(self, "causal_mask"))
+        mask = causal[:seq_len, :seq_len].to(tokens.device)
         if padding_mask is not None:
             padding_mask = padding_mask[:, :seq_len]
             padding_mask = padding_mask.to(tokens.device)
@@ -700,6 +755,123 @@ class TinyTransformerLM(nn.Module):
         if self.head_pre is not None:
             x = self.head_pre(x)
         return self.head(x)
+
+
+class GPTLanguageModel(nn.Module):
+    """GPT-2 style decoder-only LM compatible avec les checkpoints GPT (clés transformer.*)."""
+
+    def __init__(self, cfg: Config) -> None:
+        super().__init__()
+        self.cfg = cfg
+        self.block_size = cfg.block_size
+        n_embd = cfg.embed_dim
+        n_head = cfg.num_heads
+        n_layer = cfg.num_layers
+        self.transformer = nn.ModuleDict(
+            {
+                "wte": nn.Embedding(cfg.vocab_size, n_embd),
+                "wpe": nn.Embedding(cfg.block_size, n_embd),
+                "h": nn.ModuleList([GPTBlock(n_embd, n_head, cfg.dropout, bias=True) for _ in range(n_layer)]),
+                "ln_f": nn.LayerNorm(n_embd),
+            }
+        )
+        self.drop = nn.Dropout(cfg.dropout)
+        self.lm_head = nn.Linear(n_embd, cfg.vocab_size, bias=False)
+        # Align with GPT-2 weight tying convention
+        wte = cast(nn.Embedding, self.transformer["wte"])
+        self.lm_head.weight = wte.weight
+
+    def forward(self, idx: torch.Tensor, padding_mask: Optional[torch.Tensor] = None) -> torch.Tensor:
+        _, t = idx.size()
+        if t > self.block_size:
+            raise ValueError("Sequence length exceeds block size")
+        pos = torch.arange(0, t, device=idx.device, dtype=torch.long)
+        tok_emb = self.transformer["wte"](idx)
+        pos_emb = self.transformer["wpe"](pos)
+        x = tok_emb + pos_emb
+        x = self.drop(x)
+        if padding_mask is not None:
+            padding_mask = padding_mask[:, :t]
+        blocks = cast(nn.ModuleList, self.transformer["h"])
+        for block in blocks:
+            x = cast(GPTBlock, block)(x, padding_mask)
+        x = self.transformer["ln_f"](x)
+        return self.lm_head(x)
+
+    @property
+    def tok_embed(self) -> nn.Module:
+        return self.transformer["wte"]
+
+    @property
+    def ln(self) -> nn.Module:
+        return self.transformer["ln_f"]
+
+    @property
+    def head(self) -> nn.Module:
+        return self.lm_head
+
+
+class GPTBlock(nn.Module):
+    def __init__(self, n_embd: int, n_head: int, dropout: float, bias: bool = True) -> None:
+        super().__init__()
+        self.ln_1 = nn.LayerNorm(n_embd)
+        self.attn = GPTAttention(n_embd, n_head, dropout, bias=bias)
+        self.ln_2 = nn.LayerNorm(n_embd)
+        self.mlp = GPTMLP(n_embd, dropout, bias=bias)
+
+    def forward(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor]) -> torch.Tensor:
+        x = x + self.attn(self.ln_1(x), padding_mask)
+        x = x + self.mlp(self.ln_2(x))
+        return x
+
+
+class GPTAttention(nn.Module):
+    def __init__(self, n_embd: int, n_head: int, dropout: float, bias: bool = True) -> None:
+        super().__init__()
+        assert n_embd % n_head == 0, "n_embd must be divisible by n_head"
+        self.n_head = n_head
+        self.head_dim = n_embd // n_head
+        self.c_attn = nn.Linear(n_embd, 3 * n_embd, bias=bias)
+        self.c_proj = nn.Linear(n_embd, n_embd, bias=bias)
+        self.attn_drop = nn.Dropout(dropout)
+        self.resid_drop = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor, padding_mask: Optional[torch.Tensor]) -> torch.Tensor:
+        B, T, C = x.size()
+        qkv = self.c_attn(x)
+        q, k, v = qkv.split(C, dim=2)
+        q = q.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        k = k.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+        v = v.view(B, T, self.n_head, self.head_dim).transpose(1, 2)
+
+        att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
+        causal_mask = torch.tril(torch.ones((T, T), device=x.device, dtype=torch.bool))
+        att = att.masked_fill(~causal_mask, float('-inf'))
+        if padding_mask is not None:
+            pad_mask = padding_mask[:, None, None, :]
+            att = att.masked_fill(pad_mask, float('-inf'))
+        att = torch.softmax(att, dim=-1)
+        att = self.attn_drop(att)
+        y = att @ v
+        y = y.transpose(1, 2).contiguous().view(B, T, C)
+        y = self.resid_drop(self.c_proj(y))
+        return y
+
+
+class GPTMLP(nn.Module):
+    def __init__(self, n_embd: int, dropout: float, bias: bool = True) -> None:
+        super().__init__()
+        self.c_fc = nn.Linear(n_embd, 4 * n_embd, bias=bias)
+        self.gelu = nn.GELU()
+        self.c_proj = nn.Linear(4 * n_embd, n_embd, bias=bias)
+        self.drop = nn.Dropout(dropout)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.c_fc(x)
+        x = self.gelu(x)
+        x = self.c_proj(x)
+        x = self.drop(x)
+        return x
 
 
 class SubtitleDataModule:
@@ -774,7 +946,14 @@ class SubtitleDataModule:
             mmap_path = Path(self.cfg.memmap_path)
             if not mmap_path.exists():
                 raise FileNotFoundError(f"Memmap file not found: {mmap_path}")
-            mmap = np.memmap(mmap_path, mode="r", dtype=np.uint8)
+            
+            # Détection automatique du type (uint8 pour bytes, uint16 pour tokens Mistral)
+            try:
+                # On essaie d'ouvrir en uint16 si le vocab > 256
+                mmap = np.memmap(mmap_path, mode="r", dtype=np.uint16)
+            except:
+                mmap = np.memmap(mmap_path, mode="r", dtype=np.uint8)
+            
             total = int(mmap.shape[0])
             if total <= self.cfg.block_size + 1:
                 raise ValueError("Memmap too small for configured block_size")
@@ -814,7 +993,7 @@ class SubtitleDataModule:
         self._train_loader = DataLoader(
             train_ds,
             batch_size=self.cfg.batch_size,
-            shuffle=True,
+            shuffle=self.cfg.shuffle,
             drop_last=True,
             collate_fn=self._collate_batch,
             num_workers=self.cfg.num_workers,
@@ -828,7 +1007,7 @@ class SubtitleDataModule:
             shuffle=False,
             drop_last=True,
             collate_fn=self._collate_batch,
-            num_workers=max(1, self.cfg.num_workers // 2),
+            num_workers=self.cfg.num_workers if self.cfg.num_workers > 0 else 0,
             pin_memory=self.cfg.pin_memory,
             prefetch_factor=self.cfg.prefetch_factor if self.cfg.num_workers > 0 else None,
             persistent_workers=self.cfg.persistent_workers if self.cfg.num_workers > 0 else False,
@@ -853,76 +1032,68 @@ def _param_counts(module: nn.Module) -> tuple[int, int]:
     return int(total), int(trainable)
 
 
-def summarise_model(model: TinyTransformerLM) -> dict[str, object]:
+# (supprimé) version spécifique TinyTransformerLM – la variante générique ci-dessous couvre tous les modèles
+
+# Variante agnostique pour TinyTransformerLM et GPTLanguageModel (écrase la précédente)
+def summarise_model(model: nn.Module) -> dict[str, object]:
     total_params, trainable_params = _param_counts(model)
-    embedding_total, embedding_trainable = _param_counts(model.tok_embed)
-    ln_total, ln_trainable = _param_counts(model.ln)
-    if model.pre_ln_proj is not None:
-        proj_total, proj_trainable = _param_counts(model.pre_ln_proj)
+    embedding_total = embedding_trainable = 0
+    ln_total = ln_trainable = 0
+    head_total = head_trainable = 0
+
+    tok_embed = getattr(model, "tok_embed", None)
+    if tok_embed is not None:
+        embedding_total, embedding_trainable = _param_counts(tok_embed)
+
+    ln_module = getattr(model, "ln", None)
+    if ln_module is not None:
+        ln_total, ln_trainable = _param_counts(ln_module)
+
+    pre_ln_proj = getattr(model, "pre_ln_proj", None)
+    if pre_ln_proj is not None:
+        proj_total, proj_trainable = _param_counts(pre_ln_proj)
         ln_total += proj_total
         ln_trainable += proj_trainable
-    head_total, head_trainable = _param_counts(model.head)
-    if model.head_pre is not None:
-        head_pre_total, head_pre_trainable = _param_counts(model.head_pre)
-        head_total += head_pre_total
-        head_trainable += head_pre_trainable
+
+    head_module = getattr(model, "head", None)
+    if head_module is not None:
+        head_total, head_trainable = _param_counts(head_module)
+        if tok_embed is not None and isinstance(head_module, nn.Linear) and head_module.weight is tok_embed.weight:
+            head_total = head_trainable = 0
 
     layers_summary: list[dict[str, object]] = []
-    if hasattr(model.encoder, "layers"):
-        for idx, layer in enumerate(model.encoder.layers):  # type: ignore[attr-defined]
+    encoder = getattr(model, "encoder", None)
+    if encoder is not None and hasattr(encoder, "layers"):
+        for idx, layer in enumerate(encoder.layers):  # type: ignore[attr-defined]
             layer_total, layer_trainable = _param_counts(layer)
-            layers_summary.append(
-                {
-                    "name": f"Bloc {idx + 1}",
-                    "params": layer_total,
-                    "trainable": layer_trainable,
-                }
-            )
+            layers_summary.append({"name": f"Bloc {idx + 1}", "params": layer_total, "trainable": layer_trainable})
 
-    ln_shape = getattr(model.ln, "normalized_shape", ())
+    ln_shape = getattr(ln_module, "normalized_shape", ()) if ln_module is not None else ()
+    cfg_obj = getattr(model, "cfg", None)
+    embed_dim_default = int(getattr(cfg_obj, "embed_dim", 0) or 0)
     if isinstance(ln_shape, torch.Size):
-        ln_dim = int(ln_shape[0]) if len(ln_shape) else model.cfg.embed_dim
+        ln_dim = int(ln_shape[0]) if len(ln_shape) else embed_dim_default
     elif isinstance(ln_shape, (tuple, list)):
-        ln_dim = int(ln_shape[0]) if ln_shape else model.cfg.embed_dim
+        ln_dim = int(ln_shape[0]) if ln_shape else embed_dim_default
     else:
-        ln_dim = model.cfg.embed_dim
+        ln_dim = embed_dim_default
 
-    head_dim = getattr(model.head, "in_features", model.cfg.embed_dim)
+    head_dim = int(getattr(head_module, "in_features", embed_dim_default) or embed_dim_default)
 
     summary = {
         "total_params": total_params,
         "trainable_params": trainable_params,
-        "blocks": [
-            {
-                "name": "Embedding",
-                "params": embedding_total,
-                "trainable": embedding_trainable,
-            },
-            {
-                "name": "LayerNorm",
-                "params": ln_total,
-                "trainable": ln_trainable,
-            },
-            {
-                "name": "Head",
-                "params": head_total,
-                "trainable": head_trainable,
-            },
-        ],
-        "encoder_layers": layers_summary,
-        "config": {
-            "arch_preset": model.cfg.arch_preset,
-            "embed_dim": model.cfg.embed_dim,
-            "layernorm_dim": model.cfg.layernorm_dim or ln_dim,
-            "num_layers": model.cfg.num_layers,
-            "num_heads": model.cfg.num_heads,
-            "ff_hidden_dim": model.cfg.ff_hidden_dim,
-            "block_size": model.cfg.block_size,
-            "dropout": model.cfg.dropout,
-            "head_dim": model.cfg.head_dim or head_dim,
-            "vocab_size": model.cfg.vocab_size,
-        },
+        "embedding_params": (embedding_total, embedding_trainable),
+        "norm_params": (ln_total, ln_trainable),
+        "head_params": (head_total, head_trainable),
+        "layernorm_dim": ln_dim,
+        "head_dim": head_dim,
+        "num_layers": getattr(cfg_obj, "num_layers", None),
+        "num_heads": getattr(cfg_obj, "num_heads", None),
     }
+
+    if layers_summary:
+        summary["layers"] = layers_summary
     return summary
 
 
@@ -934,6 +1105,7 @@ class SubtitleTrainer:
         stop_event: Optional[threading.Event] = None,
     ) -> None:
         self.cfg = cfg
+        self.tokenizer: Any = None
         set_seed(cfg.seed)
         self.device = auto_device(cfg.device)
         print(f"Using device: {self.device}")
@@ -970,24 +1142,44 @@ class SubtitleTrainer:
                 if not tok_path.is_absolute():
                     tok_path = ROOT / tok_path
                 if tok_path.exists():
-                    # Try transformers tokenizer first
-                    try:
-                        from transformers import AutoTokenizer
-                        tokenizer = AutoTokenizer.from_pretrained(str(tok_path))
-                        vocab_size = len(tokenizer)
-                    except Exception:
-                        # Fallback to tokenizers library
+                    vocab_size = None
+                    # Try SentencePiece first
+                    if str(tok_path).endswith('.model'):
                         try:
-                            tokenizer = Tokenizer.from_file(str(tok_path))
-                            vocab = getattr(tokenizer, "get_vocab_size", None)
-                            vocab_size = int(vocab()) if callable(vocab) else None
+                            from scripts.sentencepiece_wrapper import SentencePieceWrapper
+                            tokenizer = SentencePieceWrapper(str(tok_path))
+                            vocab_size = tokenizer.get_vocab_size()
                         except Exception:
-                            vocab_size = None
+                            pass
+
+                    # Try transformers tokenizer first
+                    if vocab_size is None:
+                        try:
+                            from transformers import AutoTokenizer
+                            tokenizer = AutoTokenizer.from_pretrained(str(tok_path))
+                            vocab_size = len(tokenizer)
+                        except Exception:
+                            # Fallback to tokenizers library
+                            try:
+                                tokenizer = Tokenizer.from_file(str(tok_path))
+                                # tokenizers>=0.14 expose get_vocab_size() -> int
+                                try:
+                                    vocab_size = int(tokenizer.get_vocab_size())
+                                except Exception:
+                                    vocab_size = None
+                            except Exception:
+                                vocab_size = None
+
                     if vocab_size and vocab_size != self.cfg.vocab_size:
                         print(f"[tokenizer] Override vocab_size: {self.cfg.vocab_size} -> {vocab_size}")
                         self.cfg.vocab_size = vocab_size
                     # Store absolute path in config to be accessible in sample_text and elsewhere
                     self.cfg.tokenizer_path = tok_path
+                    # Conserve le tokenizer chargé pour l’API (si disponible)
+                    try:
+                        self.tokenizer = tokenizer  # type: ignore[assignment]
+                    except Exception:
+                        self.tokenizer = None
         except Exception as _exc:  # noqa: BLE001
             # Non-blocking: fallback to configured vocab_size
             pass
@@ -1016,24 +1208,41 @@ class SubtitleTrainer:
                     cfg.prefetch_factor = max(cfg.prefetch_factor, 2)
             except Exception:
                 pass
-        self.data_module = SubtitleDataModule(cfg)
-        self.model = TinyTransformerLM(cfg).to(self.device)
-        self.model_summary = summarise_model(self.model)
-        self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = torch.optim.AdamW(
-            self.model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay
-        )
-        # LR Scheduler: cosine annealing pour descente progressive
-        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            self.optimizer,
-            T_max=cfg.max_steps,
-            eta_min=cfg.lr * 0.1  # LR min = 10% du LR initial
-        )
-        # AMP (mixed precision) si CUDA
-        self.use_amp: bool = (self.device.type == "cuda") and bool(self.cfg.use_amp)
-        # Utiliser l'API torch.amp moderne pour éviter les avertissements
-        self.scaler = torch.amp.GradScaler("cuda", enabled=self.use_amp)
-
+        
+        # Auto-detect resources and adapt training config
+        if cfg.auto_resource_adapt and self.device.type == "cuda":
+            try:
+                # Import adaptive config - handle import from same package
+                import sys
+                import importlib.util
+                config_path = Path(__file__).parent / "adaptive_training_config.py"
+                spec = importlib.util.spec_from_file_location("adaptive_training_config", config_path)
+                module = None
+                if spec and spec.loader:
+                    module = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(module)
+                if module is None:
+                    raise ImportError("adaptive_training_config module spec could not be loaded")
+                detect_resources = module.detect_resources
+                
+                resource_config = detect_resources()
+                
+                # Only override batch_size if not explicitly set via CLI
+                if cfg.batch_size == 16:  # Default value, likely not set explicitly
+                    cfg.batch_size = resource_config.batch_size
+                    cfg.gradient_accumulation_steps = resource_config.gradient_accumulation_steps
+                    cfg.cpu_offload = resource_config.use_cpu_offload
+                    cfg.gradient_checkpointing = resource_config.enable_gradient_checkpointing
+                    cfg.nvme_cache_path = resource_config.nvme_cache_path
+                    
+                    print(f"[AutoResourceAdapt] Adapted config:")
+                    print(f"  Batch size: {cfg.batch_size}")
+                    print(f"  Gradient accumulation: {cfg.gradient_accumulation_steps}")
+                    print(f"  Effective batch: {cfg.batch_size * cfg.gradient_accumulation_steps}")
+            except Exception as e:
+                print(f"[AutoResourceAdapt] Failed to auto-adapt: {e}")
+                pass
+        # Détermination du checkpoint et de l'archi cible
         self.resume_checkpoint_path: Optional[Path] = None
         if self.cfg.resume_checkpoint is not None:
             self.resume_checkpoint_path = Path(self.cfg.resume_checkpoint)
@@ -1042,7 +1251,8 @@ class SubtitleTrainer:
             if candidate.exists():
                 self.resume_checkpoint_path = candidate
 
-        self.start_step = 0
+        checkpoint: Optional[dict[str, object]] = None
+        resume_arch: Optional[str] = None
         if self.resume_checkpoint_path is not None and self.resume_checkpoint_path.exists():
             print(f"[resume] Loading checkpoint from {self.resume_checkpoint_path}")
             # Try safe load first, fallback to unsafe for trusted local checkpoints
@@ -1053,28 +1263,84 @@ class SubtitleTrainer:
             except Exception:
                 pass
             try:
-                checkpoint = torch.load(self.resume_checkpoint_path, map_location=self.device, weights_only=True)
+                checkpoint = torch.load(self.resume_checkpoint_path, map_location="cpu", weights_only=True)
             except (TypeError, Exception):
                 try:
-                    checkpoint = torch.load(self.resume_checkpoint_path, map_location=self.device, weights_only=False)
+                    checkpoint = torch.load(self.resume_checkpoint_path, map_location="cpu", weights_only=False)
                 except TypeError:
-                    checkpoint = torch.load(self.resume_checkpoint_path, map_location=self.device)
-            
-            model_state = checkpoint.get("model_state")
-            if model_state is None:
-                raise ValueError("Checkpoint does not contain model_state")
-            self.model.load_state_dict(model_state)
-            optim_state = checkpoint.get("optimizer_state")
-            if optim_state is not None:
-                try:
-                    self.optimizer.load_state_dict(optim_state)
-                except Exception as exc:  # noqa: BLE001
-                    print(f"[warn] Impossible de charger l'état de l'optimiseur: {exc}")
-            self.start_step = int(checkpoint.get("step", 0))
-            print(f"[resume] Reprise à partir de l'étape {self.start_step}")
+                    checkpoint = torch.load(self.resume_checkpoint_path, map_location="cpu")
+
+            if checkpoint is not None:
+                model_state = checkpoint.get("model_state") or checkpoint.get("model")
+                if isinstance(model_state, dict):
+                    keys = list(model_state.keys())
+                    if any(k.startswith("transformer.wte") for k in keys):
+                        resume_arch = "gpt"
+                    elif any("tok_embed" in k for k in keys):
+                        resume_arch = "tiny"
+                ck_cfg = checkpoint.get("config")
+                if isinstance(ck_cfg, dict):
+                    cfg.embed_dim = ck_cfg.get("n_embd", cfg.embed_dim)
+                    cfg.num_heads = ck_cfg.get("n_head", cfg.num_heads)
+                    cfg.num_layers = ck_cfg.get("n_layer", cfg.num_layers)
+                    cfg.block_size = ck_cfg.get("block_size", cfg.block_size)
+                    cfg.dropout = ck_cfg.get("dropout", cfg.dropout)
+                    cfg.vocab_size = ck_cfg.get("vocab_size", cfg.vocab_size)
+            else:
+                print(f"[warn] Impossible de charger le checkpoint {self.resume_checkpoint_path}")
         elif self.resume_checkpoint_path is not None:
             print(f"[warn] Checkpoint introuvable: {self.resume_checkpoint_path}")
             self.resume_checkpoint_path = None
+
+        # Choix de l'architecture finale
+        chosen_arch = cfg.model_arch.lower() if cfg.model_arch else "auto"
+        if chosen_arch == "auto":
+            chosen_arch = resume_arch or "tiny"
+        cfg.model_arch = chosen_arch
+
+        self.data_module = SubtitleDataModule(cfg)
+        if chosen_arch == "gpt":
+            self.model = GPTLanguageModel(cfg).to(self.device)
+        else:
+            self.model = TinyTransformerLM(cfg).to(self.device)
+        self.model_summary = summarise_model(self.model)
+        self.criterion = nn.CrossEntropyLoss()
+        self.optimizer = torch.optim.AdamW(
+            self.model.parameters(), lr=cfg.lr, weight_decay=cfg.weight_decay
+        )
+        self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            self.optimizer,
+            T_max=cfg.max_steps,
+            eta_min=cfg.lr * 0.1
+        )
+        self.use_amp: bool = (self.device.type == "cuda") and bool(self.cfg.use_amp)
+        # Utiliser torch.cuda.amp pour une meilleure compatibilité avec les outils d’analyse
+        self.scaler = torch.cuda.amp.GradScaler(enabled=self.use_amp)
+
+        self.start_step = 0
+        if checkpoint is not None:
+            model_state = checkpoint.get("model_state") or checkpoint.get("model")
+            if model_state is None:
+                raise ValueError("Checkpoint does not contain model_state or model")
+            if isinstance(model_state, dict):
+                self.model.load_state_dict(model_state, strict=True)
+            else:
+                print("[warn] model_state inattendu, skip load_state_dict")
+            optim_state = checkpoint.get("optimizer_state")
+            if optim_state is not None:
+                try:
+                    if isinstance(optim_state, dict):
+                        self.optimizer.load_state_dict(optim_state)
+                    else:
+                        print("[warn] optimizer_state inattendu, skip load_state_dict")
+                except Exception as exc:  # noqa: BLE001
+                    print(f"[warn] Impossible de charger l'état de l'optimiseur: {exc}")
+            step_val = checkpoint.get("step", 0)
+            try:
+                self.start_step = int(step_val)  # type: ignore[arg-type]
+            except Exception:
+                self.start_step = 0
+            print(f"[resume] Reprise à partir de l'étape {self.start_step}")
 
         self.metadata: dict[str, object] = {}
         self.metadata_path: Optional[Path] = None
@@ -1207,7 +1473,7 @@ class SubtitleTrainer:
                 src = src.to(self.device)
                 tgt = tgt.to(self.device)
                 padding_mask = padding_mask.to(self.device)
-                with torch.amp.autocast(device_type="cuda", enabled=self.use_amp):
+                with torch.amp.autocast("cuda", enabled=self.use_amp):
                     logits = self.model(src, padding_mask=padding_mask)
                     loss = self.criterion(logits.view(-1, logits.size(-1)), tgt.view(-1))
                 total_loss += loss.item()
@@ -1229,16 +1495,25 @@ class SubtitleTrainer:
         if self.cfg.tokenizer_path is not None:
             tok_path = Path(self.cfg.tokenizer_path)
             if tok_path.exists():
-                # Try transformers tokenizer first
-                try:
-                    from transformers import AutoTokenizer
-                    tokenizer = AutoTokenizer.from_pretrained(str(tok_path))
-                except Exception:
-                    # Fallback to tokenizers library
+                # Try SentencePiece first
+                if str(tok_path).endswith('.model'):
                     try:
-                        tokenizer = Tokenizer.from_file(str(tok_path))
+                        from scripts.sentencepiece_wrapper import SentencePieceWrapper
+                        tokenizer = SentencePieceWrapper(str(tok_path))
                     except Exception:
-                        tokenizer = None
+                        pass
+
+                # Try transformers tokenizer first
+                if tokenizer is None:
+                    try:
+                        from transformers import AutoTokenizer
+                        tokenizer = AutoTokenizer.from_pretrained(str(tok_path))
+                    except Exception:
+                        # Fallback to tokenizers library
+                        try:
+                            tokenizer = Tokenizer.from_file(str(tok_path))
+                        except Exception:
+                            tokenizer = None
 
         if tokenizer is not None:
             try:
@@ -1246,12 +1521,12 @@ class SubtitleTrainer:
                 init_ids = enc or [tokenizer.bos_token_id or 0]
             except Exception:
                 init_ids = [tokenizer.bos_token_id or 0]
-            # tokenizers>=0.14 renvoie un objet Encoding pour encode();
-            # assurez-vous d'extraire la liste d'ids avant de construire le tenseur
+            # tokenizers>=0.14 renvoie un objet Encoding; extraire une liste d'ids
             try:
-                ids = init_ids.ids if hasattr(init_ids, 'ids') else init_ids
+                ids_obj = getattr(init_ids, 'ids', init_ids)
+                ids = list(ids_obj)
             except Exception:
-                ids = init_ids
+                ids = []
             tokens = torch.tensor(ids, dtype=torch.long, device=self.device).unsqueeze(0)
             generated_ids: list[int] = []
             with torch.no_grad():
@@ -1340,11 +1615,19 @@ class SubtitleTrainer:
         train_iter = iter(train_loader)
 
         try:
+            accumulated_loss = 0.0
+            accum_steps = 0
+            
             while step < self.cfg.max_steps:
                 if self._should_stop():
                     print("[train] Stop signal received, finalising run…")
                     self.status = "stopped"
                     break
+                
+                # Zero gradients only at the start of accumulation cycle
+                if accum_steps == 0:
+                    self.optimizer.zero_grad(set_to_none=True)
+                
                 try:
                     src, tgt, padding_mask = next(train_iter)
                 except StopIteration:
@@ -1355,24 +1638,41 @@ class SubtitleTrainer:
                 tgt = tgt.to(self.device)
                 padding_mask = padding_mask.to(self.device)
 
-                self.optimizer.zero_grad(set_to_none=True)
-                with torch.amp.autocast(device_type="cuda", enabled=self.use_amp):
+                # Forward pass with mixed precision
+                with torch.amp.autocast("cuda", enabled=self.use_amp):
                     logits = self.model(src, padding_mask=padding_mask)
                     loss = self.criterion(logits.view(-1, logits.size(-1)), tgt.view(-1))
+                    # Scale loss by accumulation steps
+                    loss = loss / self.cfg.gradient_accumulation_steps
 
+                # Backward pass
                 if self.use_amp:
                     self.scaler.scale(loss).backward()
-                    nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                    self.scaler.step(self.optimizer)
-                    self.scaler.update()
                 else:
                     loss.backward()
-                    nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
-                    self.optimizer.step()
                 
-                self.scheduler.step()
-                step += 1
-                train_loss = loss.item()
+                accumulated_loss += loss.item()
+                accum_steps += 1
+                
+                # Optimizer step after accumulation
+                if accum_steps >= self.cfg.gradient_accumulation_steps:
+                    nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=1.0)
+                    
+                    if self.use_amp:
+                        self.scaler.step(self.optimizer)
+                        self.scaler.update()
+                    else:
+                        self.optimizer.step()
+                    
+                    self.scheduler.step()
+                    
+                    step += 1
+                    train_loss = accumulated_loss  # Average loss from accumulation
+                    accumulated_loss = 0.0
+                    accum_steps = 0
+                else:
+                    # Skip logging and eval steps until we've done an optimizer step
+                    continue
                 should_log_train = (
                     step == self.start_step + 1
                     or step == self.cfg.max_steps
@@ -1405,7 +1705,8 @@ class SubtitleTrainer:
                     )
 
                 if self.visual_logger is not None and (should_log_train or sample_text is not None):
-                    embeddings_snapshot = self.model.tok_embed.weight.detach().cpu()
+                    embed_mod = cast(nn.Embedding, self.model.tok_embed)
+                    embeddings_snapshot = embed_mod.weight.detach().cpu()
                     valid_positions = (~padding_mask[0]).nonzero(as_tuple=False)
                     tail_index = int(valid_positions[-1]) if valid_positions.numel() else -1
                     tail_logits = logits.detach()[0, tail_index, :].cpu()
@@ -1445,16 +1746,12 @@ class SubtitleTrainer:
                     and step % self.cfg.checkpoint_interval == 0
                     and self.run_dir is not None
                 ):
-                    periodic_ckpt_path = self.run_dir / f"checkpoint_step_{step}.pt"
                     checkpoint = {
-                        "config": self.cfg.__dict__,
+                        "config": config_to_dict(self.cfg),
                         "model_state": self.model.state_dict(),
                         "optimizer_state": self.optimizer.state_dict(),
                         "step": step,
                     }
-                    torch.save(checkpoint, periodic_ckpt_path)
-                    print(f"[checkpoint] Saved periodic checkpoint at step {step}: {periodic_ckpt_path}")
-                    # Mise à jour du checkpoint principal dans le run dir
                     if self.run_checkpoint_path is not None:
                         torch.save(checkpoint, self.run_checkpoint_path)
 
@@ -1464,7 +1761,7 @@ class SubtitleTrainer:
                     break
 
             checkpoint = {
-                "config": self.cfg.__dict__,
+                "config": config_to_dict(self.cfg),
                 "model_state": self.model.state_dict(),
                 "optimizer_state": self.optimizer.state_dict(),
                 "step": step,
@@ -1502,6 +1799,13 @@ def parse_args() -> Config:
         choices=sorted(MODEL_ARCH_PRESETS),
         default=None,
         help="Nom d'un preset d'architecture (mini-gpt, small-gpt, …)",
+    )
+    parser.add_argument(
+        "--model-arch",
+        type=str,
+        choices=["auto", "tiny", "gpt"],
+        default="auto",
+        help="Choix du modèle interne (auto détecte selon le checkpoint)",
     )
     parser.add_argument(
         "--data-dir",
@@ -1671,7 +1975,7 @@ def parse_args() -> Config:
         "--metrics-log-fraction",
         type=float,
         default=argparse.SUPPRESS,
-        help="Fraction of total steps at which training loss is logged (e.g. 0.05 pour 5%)",
+        help="Fraction of total steps at which training loss is logged (e.g. 0.05 pour 5%%)",
     )
     parser.add_argument(
         "--resume-from",
@@ -1705,6 +2009,12 @@ def parse_args() -> Config:
         help="Intervalle (en steps) pour sauvegarder des checkpoints périodiques (0 = désactivé)",
     )
     parser.add_argument(
+        "--no-shuffle",
+        dest="shuffle",
+        action="store_false",
+        help="Désactiver le shuffle DataLoader (utile pour très grands corpus pré-tokenisés)",
+    )
+    parser.add_argument(
         "--num-workers",
         type=int,
         default=None,
@@ -1727,6 +2037,40 @@ def parse_args() -> Config:
         help="Désactiver persistent_workers",
     )
     parser.add_argument(
+        "--gradient-accumulation-steps",
+        type=int,
+        default=None,
+        help="Gradient accumulation steps (auto si None)",
+    )
+    parser.add_argument(
+        "--cpu-offload",
+        action="store_true",
+        help="Enable CPU offloading for activations to reduce VRAM",
+    )
+    parser.add_argument(
+        "--gradient-checkpointing",
+        action="store_true",
+        help="Enable gradient checkpointing to save memory",
+    )
+    parser.add_argument(
+        "--nvme-cache-path",
+        type=Path,
+        default=None,
+        help="Path to NVMe cache directory for model spilling",
+    )
+    parser.add_argument(
+        "--auto-resource-adapt",
+        action="store_true",
+        default=True,
+        help="Auto-detect hardware and adapt batch size (default: enabled)",
+    )
+    parser.add_argument(
+        "--no-auto-resource-adapt",
+        dest="auto_resource_adapt",
+        action="store_false",
+        help="Disable auto-resource adaptation",
+    )
+    parser.add_argument(
         "--no-auto-ram-tune",
         action="store_true",
         help="Désactiver l'ajustement automatique selon la RAM système",
@@ -1736,6 +2080,8 @@ def parse_args() -> Config:
     cfg = Config()
     if args.arch_preset is not None:
         apply_arch_preset(cfg, args.arch_preset)
+    if hasattr(args, "model_arch") and args.model_arch is not None:
+        cfg.model_arch = args.model_arch
     if args.data_dir is not None:
         cfg.data_dir = args.data_dir
     if args.extra_data_dirs:
@@ -1752,6 +2098,8 @@ def parse_args() -> Config:
         cfg.vocab_size = args.vocab_size
     if args.tokenizer_path is not None:
         cfg.tokenizer_path = args.tokenizer_path
+    if hasattr(args, "shuffle"):
+        cfg.shuffle = bool(args.shuffle)
     if args.num_heads is not None:
         cfg.num_heads = args.num_heads
     if args.num_layers is not None:

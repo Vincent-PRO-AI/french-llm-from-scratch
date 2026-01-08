@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-12-21T01:34:44.801689",
+  "version": "french-llm-v3",
+  "evaluation_metrics": {
+    "training": {
+      "train_loss_min": 5.58929443359375,
+      "train_loss_max": 6.1826887130737305,
+      "train_loss_final": 5.8542866706848145,
+      "val_loss_min": 4.138728201389313,
+      "val_loss_final": 4.150376707315445,
+      "steps_completed": 410,
+      "status": "completed"
+    },
+    "model": {
+      "checkpoint": "checkpoint_step_145000.pt",
+      "size_gb": 2.9,
+      "parameters": 260000000,
+      "layers": 18,
+      "vocab_size": 117000
+    },
+    "checkpoints": {
+      "total_saved": 18,
+      "latest": "checkpoint_step_145000.pt",
+      "latest_step": 145000
+    },
+    "data_quality": {
+      "train": {
+        "size_mb": 336.53,
+        "lines": 3193073
+      },
+      "test": {
+        "size_mb": 59.39,
+        "lines": 560699
+      }
+    }
+  }
+}

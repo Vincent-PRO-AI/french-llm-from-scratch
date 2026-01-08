@@ -1,0 +1,95 @@
+{
+  "timestamp": "2025-12-21T01:35:13.049827",
+  "french_language_checks": [
+    {
+      "check": "Accent et diacritiques",
+      "description": "Utilisation correcte des accents (é, è, ê, à, ù, etc.)",
+      "importance": "critical",
+      "examples": [
+        "été",
+        "élève",
+        "château",
+        "crème"
+      ]
+    },
+    {
+      "check": "Grammaire de base",
+      "description": "Accord en genre et nombre",
+      "importance": "critical",
+      "examples": [
+        "une belle maison",
+        "des chevaux noirs"
+      ]
+    },
+    {
+      "check": "Vocabulaire français",
+      "description": "Utilisation de mots français plutôt que d'anglicismes",
+      "importance": "high",
+      "examples": [
+        "ordinateur (pas computer)",
+        "voiture (pas car)"
+      ]
+    },
+    {
+      "check": "Conjugaison des verbes",
+      "description": "Conjugaison correcte selon le temps",
+      "importance": "critical",
+      "examples": [
+        "je vais",
+        "tu iras",
+        "il est allé"
+      ]
+    },
+    {
+      "check": "Ponctuation française",
+      "description": "Espaces correctes avant la ponctuation",
+      "importance": "medium",
+      "examples": [
+        "Bonjour !",
+        "C'est clair ?",
+        "Voilà :"
+      ]
+    },
+    {
+      "check": "Utilisation des articles",
+      "description": "Articles définis/indéfinis corrects",
+      "importance": "critical",
+      "examples": [
+        "le soleil",
+        "une pomme",
+        "les enfants"
+      ]
+    },
+    {
+      "check": "Pronoms",
+      "description": "Utilisation correcte des pronoms",
+      "importance": "high",
+      "examples": [
+        "moi, toi, lui",
+        "me, te, se"
+      ]
+    },
+    {
+      "check": "Temps verbaux",
+      "description": "Utilisation appropriée des temps (présent, passé, futur)",
+      "importance": "critical",
+      "examples": [
+        "passé composé vs imparfait",
+        "présent vs futur proche"
+      ]
+    }
+  ],
+  "evaluation_scale": {
+    "0": "Aucun effort pour parler français",
+    "1": "Erreurs graves et nombreuses",
+    "2": "Erreurs fréquentes qui nuisent à la compréhension",
+    "3": "Plusieurs erreurs mais compréhensible",
+    "4": "Quelques erreurs mais généralement correct",
+    "5": "Bon français avec quelques imprécisions",
+    "6": "Très bon français",
+    "7": "Excellent français, très naturel",
+    "8": "Français natif quasi-parfait",
+    "9": "Français littéraire raffiné",
+    "10": "Français impeccable, style et grammaire perfectionnés"
+  }
+}

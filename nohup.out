@@ -1,0 +1,899 @@
+Using device: cuda
+GPU: NVIDIA GeForce RTX 5080 | compute capability 12.0 | 15.92 GB total memory
+[ResourceDetection]
+  VRAM: 15.9 GB
+  RAM: 24.4 GB
+  NVMe free: 461.7 GB
+  Using NVMe cache at /tmp/torch_cache
+[TrainingConfig]
+  Batch size: 12
+  Gradient accumulation: 1
+  Effective batch size: 12
+  CPU offload: False
+  NVMe cache: True
+  Gradient checkpointing: True
+  Mixed precision: True
+[resume] Loading checkpoint from trained_models/runs/french-llm-from-scratch-V3-mistral/checkpoint_step_100000.pt
+[resume] Reprise à partir de l'étape 100000
+Logging metrics to /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1
+[DEBUG] setup() called, memmap_path=None
+[DEBUG] Loading pre-tokenized corpus from data_clean/finetune_train_mistral_tokenized.pt
+[DEBUG] Loaded 295,490,918 tokens from pre-tokenized corpus
+[DEBUG] setup() called, memmap_path=None
+[DEBUG] Loaders already exist, skipping setup
+[train] Starting/Resuming training at step 100000 aiming for 160000 steps
+step=100001 train_loss=5.8701
+step=100100 val_loss=8.2970
+step=100200 val_loss=8.0527
+step 100250: Bonjour,
+step=100300 val_loss=7.9900
+step=100400 val_loss=7.8993
+step 100500: Bonjour,]H]]H  ]]H]#] []
+step=100500 val_loss=7.7561
+step=100600 val_loss=7.7719
+step=100700 val_loss=7.7413
+step 100750: Bonjour, []
+step=100800 val_loss=7.6334
+step=100900 val_loss=7.5803
+step 101000: Bonjour,] 
+step=101000 val_loss=7.4563
+step=101100 val_loss=7.3954
+step=101200 val_loss=7.3273
+step 101250: Bonjour,I ]]HHHHH W]I
+step=101300 val_loss=7.2891
+step=101400 val_loss=7.1895
+step 101500: Bonjour,   ] ]
+step=101500 val_loss=7.1322
+step=101600 val_loss=7.0596
+step=101700 val_loss=6.9843
+step 101750: Bonjour,     
+step=101800 val_loss=6.8902
+step=101900 val_loss=6.9028
+step 102000: Bonjour,H]HHOHW
+step=102000 val_loss=6.8137
+step=102100 val_loss=6.7512
+step=102200 val_loss=6.7377
+step 102250: Bonjour,]]]H]HHH
+step=102300 val_loss=6.7425
+step=102400 val_loss=6.6914
+step 102500: Bonjour,]=D[[RH
+step=102500 val_loss=6.6719
+[checkpoint] Saved periodic checkpoint at step 102500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_102500.pt
+step=102600 val_loss=6.6875
+step=102700 val_loss=6.6206
+step 102750: Bonjour,]][H[IHH]]
+step=102800 val_loss=6.5693
+step=102900 val_loss=6.5543
+step 103000: Bonjour,
+step=103000 val_loss=6.5637
+step=103100 val_loss=6.4589
+step=103200 val_loss=6.4759
+step 103250: Bonjour,H]H]HL
+step=103300 val_loss=6.4253
+step=103400 val_loss=6.3740
+step 103500: Bonjour,F      DD
+step=103500 val_loss=6.3218
+step=103600 val_loss=6.2993
+step=103700 val_loss=6.2712
+step 103750: Bonjour,] R]]]]]] ]]]
+step=103800 val_loss=6.2326
+step=103900 val_loss=6.1024
+step 104000: Bonjour,]]]]]VW]]
+step=104000 train_loss=5.9457
+step=104000 val_loss=6.1472
+step=104100 val_loss=6.1302
+step=104200 val_loss=6.0502
+step 104250: Bonjour,]]]H]]H]]H]]
+step=104300 val_loss=6.0324
+step=104400 val_loss=6.0129
+step 104500: Bonjour,] W[]]7H][]]]]]
+step=104500 val_loss=5.9784
+step=104600 val_loss=5.9587
+step=104700 val_loss=5.9252
+step 104750: Bonjour,HH]
+step=104800 val_loss=5.8735
+step=104900 val_loss=5.8944
+step 105000: Bonjour,]]HH]]HH
+step=105000 val_loss=5.8293
+[checkpoint] Saved periodic checkpoint at step 105000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_105000.pt
+step=105100 val_loss=5.8333
+step=105200 val_loss=5.8305
+step 105250: Bonjour, D   
+step=105300 val_loss=5.7983
+step=105400 val_loss=5.8207
+step 105500: Bonjour,
+step=105500 val_loss=5.7923
+step=105600 val_loss=5.8047
+step=105700 val_loss=5.7867
+step 105750: Bonjour,J]]HI]]]]
+step=105800 val_loss=5.7560
+step=105900 val_loss=5.7229
+step 106000: Bonjour,]]]]]]uH]]]]]]][W]]H]]]]]W
+step=106000 val_loss=5.7041
+step=106100 val_loss=5.7156
+step=106200 val_loss=5.7234
+step 106250: Bonjour, "D
+step=106300 val_loss=5.6954
+step=106400 val_loss=5.7077
+step 106500: Bonjour,
+step=106500 val_loss=5.6901
+step=106600 val_loss=5.6690
+step=106700 val_loss=5.6549
+step 106750: Bonjour, H      
+step=106800 val_loss=5.6519
+step=106900 val_loss=5.6399
+step 107000: Bonjour,[
+step=107000 val_loss=5.6280
+step=107100 val_loss=5.6046
+step=107200 val_loss=5.6052
+step 107250: Bonjour, W]]]Q]]]]
+step=107300 val_loss=5.6188
+step=107400 val_loss=5.5721
+step 107500: Bonjour,
+step=107500 val_loss=5.6136
+[checkpoint] Saved periodic checkpoint at step 107500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_107500.pt
+step=107600 val_loss=5.5998
+step=107700 val_loss=5.5702
+step 107750: Bonjour,]]W ]J
+step=107800 val_loss=5.6040
+step=107900 val_loss=5.5739
+step 108000: Bonjour,]HI]H]#
+step=108000 val_loss=5.5597
+step=108100 val_loss=5.5677
+step=108200 val_loss=5.5522
+step 108250: Bonjour,LW]DD H]HJ  J  JWF
+step=108300 val_loss=5.5420
+step=108400 val_loss=5.5392
+step 108500: Bonjour,]RI7  J J HDDH
+step=108500 val_loss=5.5516
+step=108600 val_loss=5.5094
+step=108700 val_loss=5.4516
+step 108750: Bonjour,' 3   [ 9  [ D '
+step=108800 val_loss=5.4912
+step=108900 val_loss=5.4257
+step 109000: Bonjour, 
+step=109000 val_loss=5.4531
+step=109100 val_loss=5.4200
+step=109200 val_loss=5.4190
+step 109250: Bonjour,]]] ] 
+step=109300 val_loss=5.4370
+step=109400 val_loss=5.4558
+step 109500: Bonjour,  D
+step=109500 val_loss=5.4337
+step=109600 val_loss=5.4195
+step=109700 val_loss=5.4259
+step 109750: Bonjour, D
+step=109800 val_loss=5.4054
+step=109900 val_loss=5.3790
+step 110000: Bonjour,]WH]I]R]
+step=110000 val_loss=5.3998
+[checkpoint] Saved periodic checkpoint at step 110000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_110000.pt
+step=110100 val_loss=5.4065
+step=110200 val_loss=5.3322
+step 110250: Bonjour,]]W[H]]]HWHH]3[H]]]HH]
+step=110300 val_loss=5.3418
+step=110400 val_loss=5.3483
+step 110500: Bonjour,]3]H]J] 
+step=110500 val_loss=5.3164
+step=110600 val_loss=5.3194
+step=110700 val_loss=5.3134
+step 110750: Bonjour,J  H[ 
+step=110800 val_loss=5.2940
+step=110900 val_loss=5.3032
+step 111000: Bonjour,]]H]] ]]]]]H]#
+step=111000 val_loss=5.2822
+step=111100 val_loss=5.2742
+step=111200 val_loss=5.2550
+step 111250: Bonjour,]]] ']H]']]V][ ]]
+step=111300 val_loss=5.2997
+step=111400 val_loss=5.2671
+step 111500: Bonjour,
+step=111500 val_loss=5.2385
+step=111600 val_loss=5.2687
+step=111700 val_loss=5.2765
+step 111750: Bonjour,= ]] ]O]
+step=111800 val_loss=5.2361
+step=111900 val_loss=5.2308
+step 112000: Bonjour,]
+step=112000 train_loss=5.6399
+step=112000 val_loss=5.2466
+step=112100 val_loss=5.1993
+step=112200 val_loss=5.2043
+step 112250: Bonjour,
+step=112300 val_loss=5.1847
+step=112400 val_loss=5.2169
+step 112500: Bonjour, C"?&
+step=112500 val_loss=5.2261
+[checkpoint] Saved periodic checkpoint at step 112500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_112500.pt
+step=112600 val_loss=5.1753
+step=112700 val_loss=5.1981
+step 112750: Bonjour,]] I[] ]]
+step=112800 val_loss=5.1718
+step=112900 val_loss=5.1703
+step 113000: Bonjour,]W] ]]H]J
+step=113000 val_loss=5.1935
+step=113100 val_loss=5.1815
+step=113200 val_loss=5.1461
+step 113250: Bonjour,D
+step=113300 val_loss=5.1325
+step=113400 val_loss=5.1482
+step 113500: Bonjour,
+step=113500 val_loss=5.1312
+step=113600 val_loss=5.1348
+step=113700 val_loss=5.1503
+step 113750: Bonjour,WHWW ]HWWHH
+step=113800 val_loss=5.1551
+step=113900 val_loss=5.1064
+step 114000: Bonjour,]3]JH[] H]]HH
+step=114000 val_loss=5.0996
+step=114100 val_loss=5.1223
+step=114200 val_loss=5.0728
+step 114250: Bonjour,X
+step=114300 val_loss=5.0248
+step=114400 val_loss=5.0609
+step 114500: Bonjour,
+step=114500 val_loss=5.0677
+step=114600 val_loss=5.0449
+step=114700 val_loss=5.0125
+step 114750: Bonjour,]]][H]]]#H
+step=114800 val_loss=4.9897
+step=114900 val_loss=4.9841
+step 115000: Bonjour,
+step=115000 val_loss=5.0188
+[checkpoint] Saved periodic checkpoint at step 115000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_115000.pt
+step=115100 val_loss=4.9613
+step=115200 val_loss=4.9906
+step 115250: Bonjour,]]]] []]]]4H]
+step=115300 val_loss=5.0010
+step=115400 val_loss=5.0105
+step 115500: Bonjour,C[
+step=115500 val_loss=4.9536
+step=115600 val_loss=4.9648
+step=115700 val_loss=4.9706
+step 115750: Bonjour,WW "F]W]W ]O]']OI]RW]
+step=115800 val_loss=4.9300
+step=115900 val_loss=4.9638
+step 116000: Bonjour,]IW  ,  IH  I
+step=116000 val_loss=4.9673
+step=116100 val_loss=4.9649
+step=116200 val_loss=4.9147
+step 116250: Bonjour,      
+step=116300 val_loss=4.9489
+step=116400 val_loss=4.8951
+step 116500: Bonjour,]3]H]]]]W []]]]][]]H
+step=116500 val_loss=4.9213
+step=116600 val_loss=4.8956
+step=116700 val_loss=4.8757
+step 116750: Bonjour,DDD0
+step=116800 val_loss=4.8904
+step=116900 val_loss=4.9010
+step 117000: Bonjour,W    WH
+step=117000 val_loss=4.8874
+step=117100 val_loss=4.8756
+step=117200 val_loss=4.9038
+step 117250: Bonjour, P
+step=117300 val_loss=4.8965
+step=117400 val_loss=4.8913
+step 117500: Bonjour,
+step=117500 val_loss=4.9097
+[checkpoint] Saved periodic checkpoint at step 117500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_117500.pt
+step=117600 val_loss=4.8863
+step=117700 val_loss=4.8859
+step 117750: Bonjour,HW#   [                
+step=117800 val_loss=4.8988
+step=117900 val_loss=4.8747
+step 118000: Bonjour,
+step=118000 val_loss=4.8729
+step=118100 val_loss=4.8513
+step=118200 val_loss=4.9052
+step 118250: Bonjour,]     ]][ ]]     W  
+step=118300 val_loss=4.8519
+step=118400 val_loss=4.8779
+step 118500: Bonjour, ]] WHW
+step=118500 val_loss=4.8332
+step=118600 val_loss=4.8059
+step=118700 val_loss=4.8372
+step 118750: Bonjour,-D"
+step=118800 val_loss=4.8148
+step=118900 val_loss=4.8543
+step 119000: Bonjour,      
+step=119000 val_loss=4.8209
+step=119100 val_loss=4.8220
+step=119200 val_loss=4.8316
+step 119250: Bonjour,]H;LW]HI
+step=119300 val_loss=4.8005
+step=119400 val_loss=4.8176
+step 119500: Bonjour,]]]H
+step=119500 val_loss=4.7637
+step=119600 val_loss=4.7498
+step=119700 val_loss=4.7466
+step 119750: Bonjour,][]H ][SHW T[]
+step=119800 val_loss=4.7474
+step=119900 val_loss=4.7410
+step 120000: Bonjour,    ]
+step=120000 train_loss=5.7644
+step=120000 val_loss=4.7581
+[checkpoint] Saved periodic checkpoint at step 120000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_120000.pt
+step=120100 val_loss=4.7355
+step=120200 val_loss=4.7073
+step 120250: Bonjour,]]]]W]]_#]]]
+step=120300 val_loss=4.7146
+step=120400 val_loss=4.7345
+step 120500: Bonjour,];]]]]S]O
+step=120500 val_loss=4.6733
+step=120600 val_loss=4.6945
+step=120700 val_loss=4.6796
+step 120750: Bonjour,H
+step=120800 val_loss=4.6908
+step=120900 val_loss=4.6642
+step 121000: Bonjour,      
+step=121000 val_loss=4.6912
+step=121100 val_loss=4.6863
+step=121200 val_loss=4.6978
+step 121250: Bonjour,H]H]O]]]]]][]H
+step=121300 val_loss=4.6909
+step=121400 val_loss=4.7313
+step 121500: Bonjour, 
+step=121500 val_loss=4.6879
+step=121600 val_loss=4.6602
+step=121700 val_loss=4.6947
+step 121750: Bonjour,]Q-HH;)H[H]]
+step=121800 val_loss=4.6364
+step=121900 val_loss=4.6690
+step 122000: Bonjour,]  ' (  7 [ a
+step=122000 val_loss=4.6382
+step=122100 val_loss=4.6608
+step=122200 val_loss=4.6768
+step 122250: Bonjour,
+step=122300 val_loss=4.6469
+step=122400 val_loss=4.6479
+step 122500: Bonjour,]]]HH]WR
+step=122500 val_loss=4.6677
+[checkpoint] Saved periodic checkpoint at step 122500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_122500.pt
+step=122600 val_loss=4.6580
+step=122700 val_loss=4.6506
+step 122750: Bonjour, 0 F 2X
+step=122800 val_loss=4.6362
+step=122900 val_loss=4.6096
+step 123000: Bonjour,]
+step=123000 val_loss=4.6414
+step=123100 val_loss=4.6030
+step=123200 val_loss=4.6182
+step 123250: Bonjour,]][
+step=123300 val_loss=4.6115
+step=123400 val_loss=4.5998
+step 123500: Bonjour,HH]]]OK]HI
+step=123500 val_loss=4.6120
+step=123600 val_loss=4.6338
+step=123700 val_loss=4.6228
+step 123750: Bonjour,  ]
+step=123800 val_loss=4.6031
+step=123900 val_loss=4.5878
+step 124000: Bonjour,H]]]]]Q]]]]L
+step=124000 val_loss=4.5975
+step=124100 val_loss=4.5767
+step=124200 val_loss=4.5872
+step 124250: Bonjour,
+step=124300 val_loss=4.5929
+step=124400 val_loss=4.5808
+step 124500: Bonjour, DDDDDDDDDDDDDDDDDDDDDDDD"DDCDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+step=124500 val_loss=4.5774
+step=124600 val_loss=4.5726
+step=124700 val_loss=4.5972
+step 124750: Bonjour,7[[H& ]]  ] D& H]
+step=124800 val_loss=4.5475
+step=124900 val_loss=4.5739
+step 125000: Bonjour,
+step=125000 val_loss=4.5529
+[checkpoint] Saved periodic checkpoint at step 125000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_125000.pt
+step=125100 val_loss=4.5719
+step=125200 val_loss=4.5452
+step 125250: Bonjour,K
+step=125300 val_loss=4.5518
+step=125400 val_loss=4.5557
+step 125500: Bonjour,DDDDDDDDDDDDDDDDDDDDDCDDDCDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDCCDDCDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
+step=125500 val_loss=4.5476
+step=125600 val_loss=4.5761
+step=125700 val_loss=4.5465
+step 125750: Bonjour,                
+step=125800 val_loss=4.5741
+step=125900 val_loss=4.5773
+step 126000: Bonjour,            
+step=126000 val_loss=4.5774
+step=126100 val_loss=4.5386
+step=126200 val_loss=4.5465
+step 126250: Bonjour,QW]]? ]]
+step=126300 val_loss=4.5741
+step=126400 val_loss=4.5651
+step 126500: Bonjour,
+step=126500 val_loss=4.5607
+step=126600 val_loss=4.5470
+step=126700 val_loss=4.5218
+step 126750: Bonjour,H(WH[S]HW-]HHH]]H#]
+step=126800 val_loss=4.5599
+step=126900 val_loss=4.5351
+step 127000: Bonjour,]  J S
+step=127000 val_loss=4.4834
+step=127100 val_loss=4.4915
+step=127200 val_loss=4.5265
+step 127250: Bonjour,H[W HIW
+step=127300 val_loss=4.5342
+step=127400 val_loss=4.4964
+step 127500: Bonjour,     H      *
+step=127500 val_loss=4.5347
+[checkpoint] Saved periodic checkpoint at step 127500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_127500.pt
+step=127600 val_loss=4.5381
+step=127700 val_loss=4.5471
+step 127750: Bonjour,
+step=127800 val_loss=4.5171
+step=127900 val_loss=4.5234
+step 128000: Bonjour,]H[W]HJ];W7]
+step=128000 train_loss=5.7104
+step=128000 val_loss=4.4856
+step=128100 val_loss=4.5266
+step=128200 val_loss=4.5406
+step 128250: Bonjour,    
+step=128300 val_loss=4.5046
+step=128400 val_loss=4.5458
+step 128500: Bonjour,]]]H]]H]]]
+step=128500 val_loss=4.5129
+step=128600 val_loss=4.5091
+step=128700 val_loss=4.4802
+step 128750: Bonjour,     E      
+step=128800 val_loss=4.4855
+step=128900 val_loss=4.4952
+step 129000: Bonjour,[I 
+step=129000 val_loss=4.4709
+step=129100 val_loss=4.5159
+step=129200 val_loss=4.4542
+step 129250: Bonjour,HHHH]H] H
+step=129300 val_loss=4.4390
+step=129400 val_loss=4.4666
+step 129500: Bonjour,]]]] ]#
+step=129500 val_loss=4.4678
+step=129600 val_loss=4.4516
+step=129700 val_loss=4.4650
+step 129750: Bonjour,    m
+step=129800 val_loss=4.4469
+step=129900 val_loss=4.4696
+step 130000: Bonjour,I ]W IW HIJ[
+step=130000 val_loss=4.4374
+[checkpoint] Saved periodic checkpoint at step 130000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_130000.pt
+step=130100 val_loss=4.3940
+step=130200 val_loss=4.4402
+step 130250: Bonjour,H
+step=130300 val_loss=4.4300
+step=130400 val_loss=4.4209
+step 130500: Bonjour,
+step=130500 val_loss=4.4304
+step=130600 val_loss=4.4055
+step=130700 val_loss=4.4010
+step 130750: Bonjour,]]WIHH]HJ]H]][]H
+step=130800 val_loss=4.4203
+step=130900 val_loss=4.4400
+step 131000: Bonjour,Q WWTTWH WOTW S
+step=131000 val_loss=4.4135
+step=131100 val_loss=4.4334
+step=131200 val_loss=4.3950
+step 131250: Bonjour, C QCWCF
+step=131300 val_loss=4.3915
+step=131400 val_loss=4.3964
+step 131500: Bonjour,]] ]H [O
+step=131500 val_loss=4.4163
+step=131600 val_loss=4.4638
+step=131700 val_loss=4.4243
+step 131750: Bonjour, [  ='
+step=131800 val_loss=4.4106
+step=131900 val_loss=4.4387
+step 132000: Bonjour,]JHH]]
+step=132000 val_loss=4.4405
+step=132100 val_loss=4.4632
+step=132200 val_loss=4.4345
+step 132250: Bonjour,&WKW]WLJTT
+step=132300 val_loss=4.4313
+step=132400 val_loss=4.4459
+step 132500: Bonjour,  IH[W
+step=132500 val_loss=4.4016
+[checkpoint] Saved periodic checkpoint at step 132500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_132500.pt
+step=132600 val_loss=4.4118
+step=132700 val_loss=4.3937
+step 132750: Bonjour,]HW]7]]]IH
+step=132800 val_loss=4.4033
+step=132900 val_loss=4.4441
+step 133000: Bonjour,] []7SO]H[]
+step=133000 val_loss=4.4152
+step=133100 val_loss=4.4161
+step=133200 val_loss=4.4404
+step 133250: Bonjour,& [SIH]]
+step=133300 val_loss=4.4153
+step=133400 val_loss=4.3695
+step 133500: Bonjour,                   
+step=133500 val_loss=4.3947
+step=133600 val_loss=4.3855
+step=133700 val_loss=4.3916
+step 133750: Bonjour,  [
+step=133800 val_loss=4.3835
+step=133900 val_loss=4.3779
+step 134000: Bonjour,    
+step=134000 val_loss=4.3707
+step=134100 val_loss=4.3353
+step=134200 val_loss=4.3109
+step 134250: Bonjour,@]  D  
+step=134300 val_loss=4.3681
+step=134400 val_loss=4.3510
+step 134500: Bonjour,
+step=134500 val_loss=4.3597
+step=134600 val_loss=4.3687
+step=134700 val_loss=4.3844
+step 134750: Bonjour,]7]7]]H
+step=134800 val_loss=4.3506
+step=134900 val_loss=4.3442
+step 135000: Bonjour, X W]]W]H]
+step=135000 val_loss=4.3610
+[checkpoint] Saved periodic checkpoint at step 135000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_135000.pt
+step=135100 val_loss=4.3278
+step=135200 val_loss=4.3424
+step 135250: Bonjour, ]Q]
+step=135300 val_loss=4.3232
+step=135400 val_loss=4.3326
+step 135500: Bonjour,]I]]H]JH
+step=135500 val_loss=4.3093
+step=135600 val_loss=4.3159
+step=135700 val_loss=4.3005
+step 135750: Bonjour,0
+step=135800 val_loss=4.3191
+step=135900 val_loss=4.2867
+step 136000: Bonjour,] T HH]I]]]I]
+step=136000 train_loss=5.6302
+step=136000 val_loss=4.3335
+step=136100 val_loss=4.3083
+step=136200 val_loss=4.3052
+step 136250: Bonjour,?]?=DJDD.DDaD
+step=136300 val_loss=4.2844
+step=136400 val_loss=4.2961
+step 136500: Bonjour,
+step=136500 val_loss=4.2992
+step=136600 val_loss=4.3006
+step=136700 val_loss=4.2753
+step 136750: Bonjour, '.  78H8DK8&
+step=136800 val_loss=4.2783
+step=136900 val_loss=4.3074
+step 137000: Bonjour,' j
+step=137000 val_loss=4.2826
+step=137100 val_loss=4.2492
+step=137200 val_loss=4.2912
+step 137250: Bonjour,1[ IKQ 
+step=137300 val_loss=4.2598
+step=137400 val_loss=4.2760
+step 137500: Bonjour, XJ] ]HIH
+step=137500 val_loss=4.2713
+[checkpoint] Saved periodic checkpoint at step 137500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_137500.pt
+step=137600 val_loss=4.2746
+step=137700 val_loss=4.2804
+step 137750: Bonjour,DDDDDDDD[][SI[7H][
+step=137800 val_loss=4.2681
+step=137900 val_loss=4.2836
+step 138000: Bonjour,  DD              
+step=138000 val_loss=4.2896
+step=138100 val_loss=4.2985
+step=138200 val_loss=4.2750
+step 138250: Bonjour,   I     E
+step=138300 val_loss=4.2971
+step=138400 val_loss=4.2755
+step 138500: Bonjour, T T I TTT TTXT TW
+step=138500 val_loss=4.2889
+step=138600 val_loss=4.2722
+step=138700 val_loss=4.3132
+step 138750: Bonjour, J     
+step=138800 val_loss=4.2946
+step=138900 val_loss=4.2931
+step 139000: Bonjour,
+step=139000 val_loss=4.2689
+step=139100 val_loss=4.2431
+step=139200 val_loss=4.2976
+step 139250: Bonjour,TTT [TTXXTQ
+step=139300 val_loss=4.3342
+step=139400 val_loss=4.2887
+step 139500: Bonjour,1]DD"]
+step=139500 val_loss=4.2788
+step=139600 val_loss=4.2730
+step=139700 val_loss=4.2773
+step 139750: Bonjour,]]]O][]
+step=139800 val_loss=4.2897
+step=139900 val_loss=4.3051
+step 140000: Bonjour,         
+step=140000 val_loss=4.2267
+[checkpoint] Saved periodic checkpoint at step 140000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_140000.pt
+step=140100 val_loss=4.2689
+step=140200 val_loss=4.2531
+step 140250: Bonjour,* 777 Z.  7' F 7 77
+step=140300 val_loss=4.2347
+step=140400 val_loss=4.2497
+step 140500: Bonjour,  J J HWITXXXJHX
+step=140500 val_loss=4.2626
+step=140600 val_loss=4.2827
+step=140700 val_loss=4.2423
+step 140750: Bonjour,       
+step=140800 val_loss=4.2215
+step=140900 val_loss=4.2840
+step 141000: Bonjour,'Q]]]
+step=141000 val_loss=4.2306
+step=141100 val_loss=4.2811
+step=141200 val_loss=4.2442
+step 141250: Bonjour,H]3I]I]H]]JHJ]
+step=141300 val_loss=4.2475
+step=141400 val_loss=4.2513
+step 141500: Bonjour,     I           
+step=141500 val_loss=4.2577
+step=141600 val_loss=4.2599
+step=141700 val_loss=4.2541
+step 141750: Bonjour,ˁO]DDD H[?R  [ WQW
+step=141800 val_loss=4.2259
+step=141900 val_loss=4.2189
+step 142000: Bonjour,]]]]H]]?
+step=142000 val_loss=4.2735
+step=142100 val_loss=4.2497
+step=142200 val_loss=4.2328
+step 142250: Bonjour,               
+step=142300 val_loss=4.2651
+step=142400 val_loss=4.2557
+step 142500: Bonjour,]]]]3]]I]HQK]H
+step=142500 val_loss=4.2674
+[checkpoint] Saved periodic checkpoint at step 142500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_142500.pt
+step=142600 val_loss=4.2446
+step=142700 val_loss=4.2118
+step 142750: Bonjour,]E[]K]%E
+step=142800 val_loss=4.2259
+step=142900 val_loss=4.1859
+step 143000: Bonjour,7 %H1. *'
+step=143000 val_loss=4.2029
+step=143100 val_loss=4.1942
+step=143200 val_loss=4.2064
+step 143250: Bonjour,    7    S
+step=143300 val_loss=4.1892
+step=143400 val_loss=4.1809
+step 143500: Bonjour,'             
+step=143500 val_loss=4.1948
+step=143600 val_loss=4.1807
+step=143700 val_loss=4.1678
+step 143750: Bonjour,XOI]HH]H]
+step=143800 val_loss=4.2091
+step=143900 val_loss=4.1765
+step 144000: Bonjour,
+step=144000 train_loss=5.8216
+step=144000 val_loss=4.2041
+step=144100 val_loss=4.1965
+step=144200 val_loss=4.1807
+step 144250: Bonjour,]JQ[H3H
+step=144300 val_loss=4.1491
+step=144400 val_loss=4.1889
+step 144500: Bonjour,         
+step=144500 val_loss=4.1693
+step=144600 val_loss=4.1533
+step=144700 val_loss=4.1739
+step 144750: Bonjour,H(J]]]OTH
+step=144800 val_loss=4.1654
+step=144900 val_loss=4.1793
+step 145000: Bonjour,
+step=145000 val_loss=4.1737
+[checkpoint] Saved periodic checkpoint at step 145000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_145000.pt
+step=145100 val_loss=4.1833
+step=145200 val_loss=4.1799
+step 145250: Bonjour,W    
+step=145300 val_loss=4.1875
+step=145400 val_loss=4.1639
+step 145500: Bonjour,
+step=145500 val_loss=4.1662
+step=145600 val_loss=4.2008
+step=145700 val_loss=4.1733
+step 145750: Bonjour,              
+step=145800 val_loss=4.1862
+step=145900 val_loss=4.1390
+step 146000: Bonjour, ] 0
+step=146000 val_loss=4.1744
+step=146100 val_loss=4.1473
+step=146200 val_loss=4.1748
+step 146250: Bonjour,
+step=146300 val_loss=4.1370
+step=146400 val_loss=4.1652
+step 146500: Bonjour,0       
+step=146500 val_loss=4.1587
+step=146600 val_loss=4.1209
+step=146700 val_loss=4.1591
+step 146750: Bonjour,]3W ]JW' H
+step=146800 val_loss=4.1736
+step=146900 val_loss=4.1339
+step 147000: Bonjour,J  M      
+step=147000 val_loss=4.1615
+step=147100 val_loss=4.1218
+step=147200 val_loss=4.1419
+step 147250: Bonjour,HF7HH[H#*H[]
+step=147300 val_loss=4.1572
+step=147400 val_loss=4.1180
+step 147500: Bonjour,]]]HI]]]
+step=147500 val_loss=4.1257
+[checkpoint] Saved periodic checkpoint at step 147500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_147500.pt
+step=147600 val_loss=4.1433
+step=147700 val_loss=4.1220
+step 147750: Bonjour,
+step=147800 val_loss=4.1200
+step=147900 val_loss=4.1149
+step 148000: Bonjour,(HH]] ][]
+step=148000 val_loss=4.1368
+step=148100 val_loss=4.1700
+step=148200 val_loss=4.1460
+step 148250: Bonjour,
+step=148300 val_loss=4.1694
+step=148400 val_loss=4.1170
+step 148500: Bonjour,H]]H]]H[LHLH
+step=148500 val_loss=4.1359
+step=148600 val_loss=4.1806
+step=148700 val_loss=4.1341
+step 148750: Bonjour,]HWS]][]Q]
+step=148800 val_loss=4.2163
+step=148900 val_loss=4.1783
+step 149000: Bonjour,
+step=149000 val_loss=4.1667
+step=149100 val_loss=4.1440
+step=149200 val_loss=4.1571
+step 149250: Bonjour,]]&[S ]]O]]]]
+step=149300 val_loss=4.1281
+step=149400 val_loss=4.1272
+step 149500: Bonjour,  @
+step=149500 val_loss=4.1140
+step=149600 val_loss=4.1185
+step=149700 val_loss=4.1425
+step 149750: Bonjour,
+step=149800 val_loss=4.1418
+step=149900 val_loss=4.1282
+step 150000: Bonjour,H# H]]]HH4]]]L
+step=150000 val_loss=4.1422
+[checkpoint] Saved periodic checkpoint at step 150000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_150000.pt
+step=150100 val_loss=4.1209
+step=150200 val_loss=4.0854
+step 150250: Bonjour,0      I     
+step=150300 val_loss=4.0923
+step=150400 val_loss=4.0815
+step 150500: Bonjour,      
+step=150500 val_loss=4.1159
+step=150600 val_loss=4.0512
+step=150700 val_loss=4.0996
+step 150750: Bonjour,               E
+step=150800 val_loss=4.1028
+step=150900 val_loss=4.0915
+step 151000: Bonjour,  @R " H""
+step=151000 val_loss=4.1208
+step=151100 val_loss=4.1422
+step=151200 val_loss=4.1097
+step 151250: Bonjour,DD
+step=151300 val_loss=4.1002
+step=151400 val_loss=4.0878
+step 151500: Bonjour,                  
+step=151500 val_loss=4.1123
+step=151600 val_loss=4.1021
+step=151700 val_loss=4.0882
+step 151750: Bonjour,
+step=151800 val_loss=4.0886
+step=151900 val_loss=4.0841
+step 152000: Bonjour,H]R]]H]]H]]W]]HH]]]
+step=152000 train_loss=5.9383
+step=152000 val_loss=4.0750
+step=152100 val_loss=4.0768
+step=152200 val_loss=4.1292
+step 152250: Bonjour,       
+step=152300 val_loss=4.0660
+step=152400 val_loss=4.0804
+step 152500: Bonjour,6   *   E
+step=152500 val_loss=4.0617
+[checkpoint] Saved periodic checkpoint at step 152500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_152500.pt
+step=152600 val_loss=4.0871
+step=152700 val_loss=4.0966
+step 152750: Bonjour,W
+step=152800 val_loss=4.0720
+step=152900 val_loss=4.1089
+step 153000: Bonjour,
+step=153000 val_loss=4.0801
+step=153100 val_loss=4.0546
+step=153200 val_loss=4.0938
+step 153250: Bonjour, S]HH]7SO-l 1 [
+step=153300 val_loss=4.0658
+step=153400 val_loss=4.0584
+step 153500: Bonjour,] ]T[K]W] ]]H
+step=153500 val_loss=4.0549
+step=153600 val_loss=4.0546
+step=153700 val_loss=4.0958
+step 153750: Bonjour,   Z  
+step=153800 val_loss=4.0686
+step=153900 val_loss=4.0957
+step 154000: Bonjour,         I N
+step=154000 val_loss=4.0640
+step=154100 val_loss=4.0894
+step=154200 val_loss=4.0884
+step 154250: Bonjour, 7 E      
+step=154300 val_loss=4.1108
+step=154400 val_loss=4.0707
+step 154500: Bonjour,
+step=154500 val_loss=4.0669
+step=154600 val_loss=4.0864
+step=154700 val_loss=4.0484
+step 154750: Bonjour,
+step=154800 val_loss=4.0463
+step=154900 val_loss=4.0469
+step 155000: Bonjour,DD
+step=155000 val_loss=4.0634
+[checkpoint] Saved periodic checkpoint at step 155000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_155000.pt
+step=155100 val_loss=4.0913
+step=155200 val_loss=4.0811
+step 155250: Bonjour, S  
+step=155300 val_loss=4.0579
+step=155400 val_loss=4.0893
+step 155500: Bonjour,        
+step=155500 val_loss=4.0559
+step=155600 val_loss=4.0506
+step=155700 val_loss=4.1016
+step 155750: Bonjour,
+step=155800 val_loss=4.0720
+step=155900 val_loss=4.0586
+step 156000: Bonjour,Q  E         E
+step=156000 val_loss=4.0628
+step=156100 val_loss=4.0314
+step=156200 val_loss=4.0483
+step 156250: Bonjour,              
+step=156300 val_loss=4.0325
+step=156400 val_loss=4.0209
+step 156500: Bonjour,
+step=156500 val_loss=4.0281
+step=156600 val_loss=4.0341
+step=156700 val_loss=4.0438
+step 156750: Bonjour,        
+step=156800 val_loss=4.0727
+step=156900 val_loss=4.0800
+step 157000: Bonjour,
+step=157000 val_loss=4.0606
+step=157100 val_loss=4.0368
+step=157200 val_loss=4.0399
+step 157250: Bonjour, 
+step=157300 val_loss=4.0909
+step=157400 val_loss=4.0763
+step 157500: Bonjour,1      
+step=157500 val_loss=4.0766
+[checkpoint] Saved periodic checkpoint at step 157500: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_157500.pt
+step=157600 val_loss=4.0695
+step=157700 val_loss=4.0229
+step 157750: Bonjour,      
+step=157800 val_loss=4.0498
+step=157900 val_loss=4.0363
+step 158000: Bonjour,]H # I]]H (]]]H]]
+step=158000 val_loss=4.0544
+step=158100 val_loss=4.0396
+step=158200 val_loss=4.0186
+step 158250: Bonjour, 0  E     
+step=158300 val_loss=4.0261
+step=158400 val_loss=3.9906
+step 158500: Bonjour,WWWH[]O]]H]H
+step=158500 val_loss=4.0282
+step=158600 val_loss=4.0208
+step=158700 val_loss=4.0265
+step 158750: Bonjour,   DDD T
+step=158800 val_loss=4.0754
+step=158900 val_loss=3.9921
+step 159000: Bonjour,]]]OHTT
+step=159000 val_loss=4.0082
+step=159100 val_loss=4.0309
+step=159200 val_loss=4.0002
+step 159250: Bonjour,D     
+step=159300 val_loss=4.0512
+step=159400 val_loss=4.0411
+step 159500: Bonjour, " "
+step=159500 val_loss=4.0246
+step=159600 val_loss=4.0355
+step=159700 val_loss=4.0210
+step 159750: Bonjour,*
+step=159800 val_loss=4.0458
+step=159900 val_loss=4.0325
+step 160000: Bonjour,   '    
+step=160000 train_loss=4.9501
+step=160000 val_loss=4.0593
+[checkpoint] Saved periodic checkpoint at step 160000: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_160000.pt
+Saved checkpoint to /home/vincent/code/repo/french-llm-from-scratch/trained_models/tiny_subtitles_transformer.pt
+Run-specific checkpoint: /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_v3_finetune_resample_1/checkpoint.pt

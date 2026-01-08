@@ -1,11 +1,46 @@
-# Dépendances principales pour l'API Flask, les scripts de préparation et l'entraînement
-# Installez la variante PyTorch adaptée à votre environnement CUDA (cf. README).
-torch>=2.2
-flask>=3.0
-requests>=2.31
-tokenizers>=0.15
-datasets>=2.19
-langdetect>=1.0.9
-yt-dlp>=2024.3.10
-tqdm>=4.66
-numpy>=1.26
+# French LLM from Scratch - Training & Deployment
+# PHASE 2-4: Mistral Architecture Training Pipeline
+
+# Core Deep Learning
+torch>=2.2.0,<3.0  # PyTorch (GPU support required)
+transformers>=4.36.0  # HuggingFace Transformers (Mistral support)
+datasets>=2.19.0  # HuggingFace Datasets
+tokenizers>=0.15.0  # Fast tokenizers
+accelerate>=0.27.0  # Distributed training utilities
+
+# Optimization & Training
+bitsandbytes>=0.42.0  # Quantization support (optional but recommended)
+peft>=0.8.0  # Parameter-Efficient Fine-Tuning
+pydantic>=2.0  # Data validation
+pydantic-settings>=2.0
+
+# Monitoring & Logging
+tensorboard>=2.15.0  # Training visualization
+wandb>=0.16.0  # Weights & Biases (optional)
+tqdm>=4.66.0  # Progress bars
+
+# Data Processing
+numpy>=1.26.0
+pandas>=2.1.0
+scipy>=1.12.0  # Scientific computing
+
+# GGUF Export & Deployment
+llama-cpp-python>=0.2.80  # GGUF inference
+sentencepiece>=0.2.0  # Tokenizer format support
+
+# Utilities
+requests>=2.31.0  # HTTP requests
+tqdm>=4.66.0  # Progress bars
+pyyaml>=6.0  # YAML config
+python-dotenv>=1.0.0  # Environment variables
+pathlib2>=2.3.0; python_version < '3.4'
+
+# Development (optional)
+flake8>=7.0.0  # Linting
+black>=24.1.0  # Code formatting
+pytest>=7.4.0  # Testing
+
+# Deployment (optional)
+fastapi>=0.104.0  # REST API
+uvicorn>=0.24.0  # ASGI server
+pydantic>=2.0  # Data validation

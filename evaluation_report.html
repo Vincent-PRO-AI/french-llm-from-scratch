@@ -1,0 +1,186 @@
+
+    <!DOCTYPE html>
+    <html lang="fr">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Rapport d'Évaluation - French LLM</title>
+        <style>
+            body {
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                margin: 0;
+                padding: 20px;
+            }
+            .container {
+                max-width: 1000px;
+                margin: 0 auto;
+                background: white;
+                padding: 30px;
+                border-radius: 10px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+            h1 {
+                color: #667eea;
+                border-bottom: 3px solid #667eea;
+                padding-bottom: 10px;
+            }
+            h2 {
+                color: #764ba2;
+                margin-top: 30px;
+            }
+            .metric {
+                background: #f8f9fa;
+                padding: 15px;
+                margin: 10px 0;
+                border-left: 4px solid #667eea;
+                border-radius: 5px;
+            }
+            .metric-value {
+                font-size: 1.5em;
+                font-weight: bold;
+                color: #667eea;
+            }
+            .metric-label {
+                color: #666;
+                font-size: 0.9em;
+            }
+            .status-good {
+                color: #28a745;
+            }
+            .status-warning {
+                color: #ffc107;
+            }
+            .status-bad {
+                color: #dc3545;
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin: 20px 0;
+            }
+            th, td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #ddd;
+            }
+            th {
+                background: #667eea;
+                color: white;
+            }
+            tr:hover {
+                background: #f5f5f5;
+            }
+            .footer {
+                margin-top: 30px;
+                padding-top: 20px;
+                border-top: 1px solid #ddd;
+                color: #666;
+                font-size: 0.9em;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>📊 Rapport d'Évaluation - French LLM v3</h1>
+    
+        <h2>🎯 Métriques d'Entraînement</h2>
+        <div class="metric">
+            <div class="metric-label">Loss Validation (Final)</div>
+            <div class="metric-value status-good">4.1504</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Steps Complétés</div>
+            <div class="metric-value">410</div>
+        </div>
+        <table>
+            <tr>
+                <th>Métrique</th>
+                <th>Valeur</th>
+            </tr>
+            <tr>
+                <td>Train Loss (Min)</td>
+                <td>5.5893</td>
+            </tr>
+            <tr>
+                <td>Train Loss (Max)</td>
+                <td>6.1827</td>
+            </tr>
+            <tr>
+                <td>Val Loss (Min)</td>
+                <td>4.1387</td>
+            </tr>
+            <tr>
+                <td>Status</td>
+                <td class="status-good">✅ completed</td>
+            </tr>
+        </table>
+        
+        <h2>🤖 Modèle</h2>
+        <table>
+            <tr>
+                <th>Propriété</th>
+                <th>Valeur</th>
+            </tr>
+            <tr>
+                <td>Taille</td>
+                <td>2.9 GB</td>
+            </tr>
+            <tr>
+                <td>Paramètres</td>
+                <td>260,000,000</td>
+            </tr>
+            <tr>
+                <td>Couches</td>
+                <td>18</td>
+            </tr>
+            <tr>
+                <td>Vocab Size</td>
+                <td>117,000</td>
+            </tr>
+            <tr>
+                <td>Checkpoint</td>
+                <td>checkpoint_step_145000.pt</td>
+            </tr>
+        </table>
+        
+        <h2>💾 Checkpoints</h2>
+        <div class="metric">
+            <div class="metric-label">Total Sauvegardés</div>
+            <div class="metric-value">18</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Dernier Step</div>
+            <div class="metric-value">145,000</div>
+        </div>
+        
+        <h2>📚 Qualité des Données</h2>
+        <table>
+            <tr>
+                <th>Dataset</th>
+                <th>Taille</th>
+                <th>Lignes</th>
+            </tr>
+        
+            <tr>
+                <td>TRAIN</td>
+                <td>336.53 MB</td>
+                <td>3,193,073</td>
+            </tr>
+            
+            <tr>
+                <td>TEST</td>
+                <td>59.39 MB</td>
+                <td>560,699</td>
+            </tr>
+            </table>
+            <div class="footer">
+                <p>Rapport généré le 2025-12-21T01:34:44.801689</p>
+                <p>Version: french-llm-v3</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    

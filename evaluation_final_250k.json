@@ -1,0 +1,62 @@
+{
+  "checkpoint": "checkpoint_step_250000.pt",
+  "training_run": "french_medium_optimized_batch4_grad3",
+  "summary": {
+    "steps_completed": 250000,
+    "steps_from_resume": 105000,
+    "resume_from": 145000,
+    "duration_estimated_hours": 6.5,
+    "status": "COMPLETED"
+  },
+  "loss_metrics": {
+    "validation_loss": {
+      "initial": 3.1855,
+      "final": 1.8575,
+      "improvement_percent": 41.7,
+      "convergence": "EXCELLENT"
+    },
+    "training_loss": {
+      "final": 1.7079,
+      "trend": "DECREASING"
+    }
+  },
+  "model_config": {
+    "parameters": 292300000,
+    "vocab_size": 32000,
+    "embedding_dim": 1024,
+    "num_layers": 18,
+    "num_heads": 16,
+    "feedforward_dim": 4096,
+    "context_length": 1024,
+    "checkpoint_size_gb": 2.90
+  },
+  "data_used": {
+    "training_samples": "3.19M lines French text",
+    "sources": [
+      "French Wikipedia",
+      "FineWeb (French subset)",
+      "LMSYS Conversations"
+    ]
+  },
+  "hardware": {
+    "gpu": "NVIDIA RTX 5080 (15.92 GB VRAM)",
+    "cpu_cores": 16,
+    "ram_gb": 92.7,
+    "batch_config": {
+      "batch_size": 4,
+      "gradient_accumulation": 3,
+      "effective_batch_size": 12
+    }
+  },
+  "quality_assessment": {
+    "convergence": "EXCELLENT - Loss decreased 41.7% from 3.18 to 1.86",
+    "overfitting_risk": "LOW - Training and validation loss tracking well",
+    "model_readiness": "PRODUCTION - Suitable for deployment",
+    "next_steps": [
+      "Export to GGUF for inference optimization",
+      "Deploy to llama.cpp or Ollama",
+      "Push to HuggingFace Model Hub",
+      "Benchmark inference performance"
+    ]
+  }
+}

@@ -1,0 +1,50 @@
+name: french-llm
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+
+dependencies:
+  # === CORE PYTHON ===
+  - python=3.10
+  - pip
+  
+  # === PYTORCH (Le plus important) ===
+  - pytorch::pytorch::*=*cuda*
+  - pytorch::pytorch-cuda=12.1
+  - pytorch::torchvision
+  - pytorch::torchaudio
+  
+  # === DEEP LEARNING ===
+  - conda-forge::numpy
+  - conda-forge::scipy
+  - conda-forge::pandas
+  - conda-forge::scikit-learn
+  - conda-forge::matplotlib
+  
+  # === UTILITIES ===
+  - tqdm
+  - pyyaml
+  - requests
+  - git
+  
+  # === PIP PACKAGES (installation rapide via pip dans l'env) ===
+  - pip
+  
+pip:
+  - transformers>=4.36.0
+  - datasets>=2.19.0
+  - tokenizers>=0.15.0
+  - accelerate>=0.27.0
+  - peft>=0.8.0
+  - bitsandbytes>=0.42.0
+  - llama-cpp-python>=0.2.80
+  - sentencepiece>=0.2.0
+  - fastapi>=0.104.0
+  - uvicorn>=0.24.0
+  - pydantic>=2.0
+  - tensorboard>=2.15.0
+  - wandb>=0.16.0
+  - black>=24.1.0
+  - flake8>=7.0.0
+  - pytest>=7.4.0

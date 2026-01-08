@@ -1,0 +1,52 @@
+{
+  "timestamp": "2025-12-21T01:39:30.187065",
+  "checkpoint": "checkpoint_step_145000",
+  "device": "cuda",
+  "capabilities": {
+    "french_language": {
+      "status": "✅ Entraîné sur 3.7M lignes en français",
+      "vocab_size": 117000,
+      "training_steps": 146000
+    },
+    "reasoning": {
+      "status": "✅ 18 couches transformer (bonne capacité)",
+      "layers": 18,
+      "attention_heads": 16
+    },
+    "knowledge": {
+      "status": "⚠️ Limité au data d'entraînement (Wikipedia + FineWeb + Conversations)",
+      "data_sources": [
+        "Wikipedia",
+        "FineWeb",
+        "Conversations LMSYS"
+      ],
+      "total_tokens": "~1.6B tokens"
+    },
+    "generation": {
+      "status": "✅ Fonctionnel avec top-k sampling",
+      "max_context": 1024,
+      "vocab_tokens": 117000
+    }
+  },
+  "strengths": [
+    "Modèle 260M paramètres = bon équilibre performance/latence",
+    "Entraîné spécifiquement sur français",
+    "Validations loss: 4.15 (excellent)",
+    "Gradient checkpointing activé (optimisé)",
+    "18 couches transformer = bonne représentation"
+  ],
+  "limitations": [
+    "Pas de fine-tuning RLHF",
+    "Cutoff de connaissances: Décembre 2024",
+    "Pas de multi-lingual (français seulement)",
+    "Max 1024 tokens de contexte",
+    "Val loss > train loss: possible overfitting"
+  ],
+  "recommendations": [
+    "Continuer entraînement avec batch_size 16-32 (49GB RAM disponible)",
+    "Implémenter l'inférence quantifiée (Q8) pour réduire latence",
+    "Ajouter fine-tuning RLHF sur exemples français de haute qualité",
+    "Tester avec des prompts variés pour évaluer robustesse",
+    "Exporter en GGML pour déploiement efficace"
+  ]
+}

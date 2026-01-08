@@ -1,0 +1,64 @@
+{
+  "timestamp": "2025-12-21T01:39:30.213858",
+  "current_setup": {
+    "ram_total": "49 GB",
+    "gpu_vram": "17 GB (RTX 5080)",
+    "cpu_cores": 16,
+    "batch_size": 8,
+    "gradient_accumulation": 2,
+    "current_training_speed": "~2 steps/sec"
+  },
+  "optimization_phases": [
+    {
+      "phase": 1,
+      "name": "Augmentation Batch Size",
+      "changes": {
+        "batch_size": "8 → 16",
+        "gradient_accumulation": "2 → 1",
+        "expected_speedup": "2x"
+      },
+      "ram_usage": "~12 GB",
+      "gpu_vram_usage": "~15 GB"
+    },
+    {
+      "phase": 2,
+      "name": "Mixed Precision (AMP)",
+      "changes": {
+        "dtype": "float32 → float16",
+        "memory_reduction": "~50%",
+        "expected_speedup": "1.5-2x"
+      },
+      "ram_usage": "~8 GB",
+      "gpu_vram_usage": "~10 GB"
+    },
+    {
+      "phase": 3,
+      "name": "Données en cache",
+      "changes": {
+        "cache_dataset": "Charger tout en RAM",
+        "io_overhead_reduction": "90%",
+        "expected_speedup": "1.2-1.5x"
+      },
+      "ram_usage": "~35 GB",
+      "gpu_vram_usage": "~10 GB",
+      "note": "Toujours dans les limites (49 GB disponible)"
+    }
+  ],
+  "final_configuration": {
+    "batch_size": 16,
+    "gradient_accumulation": 1,
+    "mixed_precision": true,
+    "gradient_checkpointing": true,
+    "data_caching": true,
+    "total_speedup": "~4-5x",
+    "estimated_steps_per_sec": "8-10",
+    "training_time_for_100k_steps": "~3 hours (vs 12 hours actuellement)"
+  },
+  "implementation_steps": [
+    "1. Mettre à jour train_subtitles_transformer.py avec batch_size=16",
+    "2. Activer AMP (torch.autocast)",
+    "3. Charger les données en cache au démarrage",
+    "4. Continuer depuis checkpoint 145000.pt",
+    "5. Target: 200k-250k steps supplémentaires"
+  ]
+}

@@ -3,7 +3,20 @@
 import torch
 import os
 import shutil
+import math
+import json
 from safetensors.torch import save_file
+
+def _create_pos_encoding(embed_dim: int, max_seq_len: int) -> torch.Tensor:
+    position = torch.arange(max_seq_len).unsqueeze(1)
+    div_term = torch.exp(
+        torch.arange(0, embed_dim, 2, dtype=torch.float32)
+        * (-math.log(10000.0) / embed_dim)
+    )
+    encoding = torch.zeros(max_seq_len, embed_dim, dtype=torch.float32)
+    encoding[:, 0::2] = torch.sin(position * div_term)
+    encoding[:, 1::2] = torch.cos(position * div_term)
+    return encoding
 
 def convert_state_dict(checkpoint_state_dict):
     """Convertit les clés du checkpoint custom vers format Transformers."""
@@ -87,23 +100,28 @@ def convert_state_dict(checkpoint_state_dict):
         else:
             print(f"⚠️ Clé inconnue: {key}")
     
-    # Ajouter position embeddings (initialisé aléatoirement car absent du checkpoint)
-    # GPT-2 utilise learned positional embeddings
+    # Ajouter position embeddings (Sinusoidal fixed)
     if "transformer.wpe.weight" not in new_state:
         # Doit correspondre à max_position_embeddings dans config (1024)
+        print(f"⚠️ Génération des embeddings positionnels sinusoïdaux fixes...")
+        
+        # Récupérer dimensions depuis wte
         wte_shape = new_state["transformer.wte.weight"].shape
         vocab_size, embed_dim = wte_shape
-        max_seq_len = 1024
-        new_state["transformer.wpe.weight"] = torch.randn(max_seq_len, embed_dim) * 0.02
-        print(f"⚠️ Position embeddings initialisés aléatoirement: {max_seq_len}x{embed_dim}")
+        max_seq_len = 1024 # Valeur par défaut
+        
+        # Générer matrice sinusoïdale
+        pos_enc = _create_pos_encoding(embed_dim, max_seq_len)
+        new_state["transformer.wpe.weight"] = pos_enc
+        print(f"✅ Generated transformer.wpe.weight: {max_seq_len}x{embed_dim}")
     
     return new_state
 
 
 def main():
-    checkpoint_path = "trained_models/runs/french_medium_mega_finetune_200k/checkpoint_step_200000.pt"
-    output_dir = "trained_models/huggingface/french-llm-finetune-200k-fixed"
-    base_model_dir = "trained_models/huggingface/french-llm-from-scratch"
+    checkpoint_path = "trained_models/runs/french_v3_finetune_pure_fr_160k_long/checkpoint_step_200000.pt"
+    output_dir = "trained_models/hf_converted/french_200k_gpt2"
+    tokenizer_dir = "data_clean/mistral_tokenizer"
     
     print("📦 Chargement du checkpoint...")
     checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
@@ -125,23 +143,54 @@ def main():
     new_state_dict_cloned = {k: v.clone() for k, v in new_state_dict.items()}
     save_file(new_state_dict_cloned, os.path.join(output_dir, "model.safetensors"))
     
-    # Copier les fichiers tokenizer et config depuis le modèle de base
-    print("\n📋 Copie des fichiers tokenizer et config...")
+    # Copier les fichiers tokenizer
+    print("\n📋 Copie des fichiers tokenizer...")
     files_to_copy = [
         "tokenizer.json",
         "tokenizer_config.json",
         "special_tokens_map.json",
-        "config.json",
     ]
     
     for filename in files_to_copy:
-        src = os.path.join(base_model_dir, filename)
+        src = os.path.join(tokenizer_dir, filename)
         dst = os.path.join(output_dir, filename)
         if os.path.exists(src):
             shutil.copy2(src, dst)
             print(f"  ✅ {filename}")
         else:
             print(f"  ⚠️ {filename} non trouvé")
+            
+    # Créer config.json pour GPT-2
+    print("\n⚙️ Création de config.json standard GPT-2...")
+    gpt2_config = {
+        "activation_function": "gelu_new",
+        "architectures": [
+            "GPT2LMHeadModel"
+        ],
+        "attn_pdrop": 0.1,
+        "bos_token_id": 1,
+        "embd_pdrop": 0.1,
+        "eos_token_id": 2,
+        "initializer_range": 0.02,
+        "layer_norm_epsilon": 1e-05,
+        "model_type": "gpt2",
+        "n_ctx": 1024,
+        "n_embd": 1024,
+        "n_head": 16,
+        "n_layer": 18,
+        "n_positions": 1024,
+        "vocab_size": 32000,
+        "task_specific_params": {
+            "text-generation": {
+            "do_sample": True,
+            "max_length": 50
+            }
+        }
+    }
+    
+    with open(os.path.join(output_dir, "config.json"), "w") as f:
+        json.dump(gpt2_config, f, indent=2)
+    print("  ✅ config.json créé")
     
     # Créer un README minimal
     readme = f"""---

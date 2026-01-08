@@ -1461,7 +1461,10 @@ def create_app(config: ServerConfig) -> Flask:
             }
         )
 
-    perform_startup_checks(app)
+    # Optionally skip startup probes (useful when visuals/metrics files are large)
+    import os
+    if not os.getenv("SKIP_STARTUP_PROBES"):
+        perform_startup_checks(app)
     return app
 
 

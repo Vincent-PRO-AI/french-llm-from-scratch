@@ -1,0 +1,364 @@
+{
+  "timestamp": "2026-01-08T15:31:08.706254",
+  "model_step": 250000,
+  "checkpoint": "trained_models/runs/french_medium_optimized_batch4_grad3/checkpoint.pt",
+  "device": "cuda",
+  "total_tests": 50,
+  "successful": 0,
+  "failed": 50,
+  "success_rate": 0.0,
+  "avg_latency": null,
+  "avg_quality_score": null,
+  "results": [
+    {
+      "idx": 1,
+      "prompt": "L'histoire de la civilisation française",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 2,
+      "prompt": "Les grands auteurs de la littérature française",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 3,
+      "prompt": "La Révolution française a changé",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 4,
+      "prompt": "Napoléon Bonaparte était",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 5,
+      "prompt": "Le Moyen Âge était une période",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 6,
+      "prompt": "L'intelligence artificielle est",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 7,
+      "prompt": "La physique quantique explique",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 8,
+      "prompt": "Les mathématiques sont le fondement",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 9,
+      "prompt": "L'astronomie nous montre que",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 10,
+      "prompt": "La biologie moderne révèle",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 11,
+      "prompt": "La question fondamentale de la philosophie est",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 12,
+      "prompt": "Socrate croyait que",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 13,
+      "prompt": "La liberté humaine signifie",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 14,
+      "prompt": "La morale est basée sur",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 15,
+      "prompt": "Qu'est-ce que la conscience",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 16,
+      "prompt": "La démocratie est un système",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 17,
+      "prompt": "Les droits humains sont",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 18,
+      "prompt": "L'égalité dans la société signifie",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 19,
+      "prompt": "La justice sociale demande",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 20,
+      "prompt": "La gouvernance efficace nécessite",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 21,
+      "prompt": "L'économie mondiale fonctionne",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 22,
+      "prompt": "Le capitalisme encourage",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 23,
+      "prompt": "Le commerce international favorise",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 24,
+      "prompt": "L'inflation affecte",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 25,
+      "prompt": "La productivité augmente quand",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 26,
+      "prompt": "L'éducation est essentielle pour",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 27,
+      "prompt": "L'apprentissage tout au long de la vie",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 28,
+      "prompt": "Les universités devraient préparer",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 29,
+      "prompt": "La formation professionnelle aide",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 30,
+      "prompt": "L'éducation numérique transforme",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 31,
+      "prompt": "Le changement climatique est causé par",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 32,
+      "prompt": "La protection de l'environnement demande",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 33,
+      "prompt": "Les énergies renouvelables offrent",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 34,
+      "prompt": "La biodiversité est importante car",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 35,
+      "prompt": "La pollution affecte la santé",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 36,
+      "prompt": "L'art exprime",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 37,
+      "prompt": "La musique a le pouvoir de",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 38,
+      "prompt": "La peinture Renaissance était",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 39,
+      "prompt": "Le cinéma moderne montre",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 40,
+      "prompt": "La danse traduit",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 41,
+      "prompt": "La psychologie étudie",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 42,
+      "prompt": "Le stress mental peut être réduit par",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 43,
+      "prompt": "L'empathie est la capacité de",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 44,
+      "prompt": "La résilience signifie",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 45,
+      "prompt": "La dépression affecte",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 46,
+      "prompt": "Les réseaux sociaux ont transformé",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 47,
+      "prompt": "La cybersécurité protège",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 48,
+      "prompt": "La blockchain révolutionne",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 49,
+      "prompt": "L'Internet des objets connecte",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    },
+    {
+      "idx": 50,
+      "prompt": "La réalité virtuelle permet",
+      "output": "",
+      "error": "'TinyTransformerLM' object has no attribute 'generate'",
+      "status": "❌ FAILED"
+    }
+  ]
+}

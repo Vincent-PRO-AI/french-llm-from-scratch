@@ -1,0 +1,93 @@
+{
+  "timestamp": "2025-12-21T01:42:52.075209",
+  "current_ram": 45.8,
+  "claimed_ram": 96.0,
+  "scenarios": {
+    "scenario_conservative": {
+      "name": "Conservative (45 GB confirmés)",
+      "ram_available": 45,
+      "ram_for_training": 35,
+      "batch_size": 24,
+      "gradient_accumulation": 1,
+      "amp_enabled": true,
+      "data_cache": true,
+      "speedup": "5-6x",
+      "steps_per_sec": 10,
+      "time_100k_steps": "2.8 hours",
+      "notes": "Configuration safe, pas de risque OOM"
+    },
+    "scenario_aggressive": {
+      "name": "Aggressive (96 GB si disponible)",
+      "ram_available": 96,
+      "ram_for_training": 80,
+      "batch_size": 64,
+      "gradient_accumulation": 1,
+      "amp_enabled": true,
+      "data_cache": true,
+      "speedup": "10-12x",
+      "steps_per_sec": 20,
+      "time_100k_steps": "1.4 hours",
+      "notes": "Si 96 GB sont accessibles - configuration max performance"
+    }
+  },
+  "diagnostic_plan": {
+    "timestamp": "2025-12-21T01:42:52.074947",
+    "current_state": {
+      "detected_ram": "45-46 GB",
+      "physical_ram": "96 GB (2x 48 GB assumé)",
+      "gap": "~50 GB non reconnue"
+    },
+    "possible_causes": [
+      "BIOS: RAM non reconnue ou désactivée",
+      "Kernel: RAM non mappée correctement",
+      "Virtualization: Limite de mémoire imposée",
+      "Slots: RAM non enfichées correctement"
+    ],
+    "diagnostic_steps": [
+      {
+        "step": 1,
+        "action": "Vérifier les slots physiques",
+        "commands": [
+          "Redémarrer et vérifier dans BIOS",
+          "Chercher \"Memory\", \"DIMM\", \"RAM speed\"",
+          "Vérifier que 2x48 GB apparaissent"
+        ]
+      },
+      {
+        "step": 2,
+        "action": "Vérifier le BIOS",
+        "commands": [
+          "Chercher \"Memory Configuration\"",
+          "Désactiver \"Memory Hole\" si activé",
+          "Vérifier \"XMP/DOCP\" (profil RAM haute perf)",
+          "Sauvegarder et redémarrer"
+        ]
+      },
+      {
+        "step": 3,
+        "action": "Vérifier Linux après redémarrage",
+        "commands": [
+          "free -h  (devrait afficher ~96 GB)",
+          "cat /proc/meminfo | grep MemTotal",
+          "dmesg | grep -i memory  (pour les erreurs)"
+        ]
+      },
+      {
+        "step": 4,
+        "action": "Si toujours 45 GB seulement",
+        "commands": [
+          "Vérifier les logs BIOS pour warnings",
+          "Tester chaque barrette RAM individuellement",
+          "Réenficher les RAM correctement",
+          "Consulter le manuel de la carte mère"
+        ]
+      }
+    ],
+    "immediate_actions": [
+      "1. Lancer diagnostic sur 45 GB actuels",
+      "2. Relancer training avec batch_size=24 (5-6x speedup)",
+      "3. En parallèle, investiguer la RAM manquante",
+      "4. Si 96 GB trouvés → redémarrer et passer à batch_size=64 (10-12x)"
+    ]
+  }
+}

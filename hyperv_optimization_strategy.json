@@ -1,0 +1,79 @@
+{
+  "timestamp": "2025-12-21T01:43:23.603976",
+  "system_type": "Hyper-V Virtual Machine",
+  "current_ram": 45.9,
+  "potential_ram": 96.0,
+  "limitation": "hv_balloon driver (dynamic memory)",
+  "phase_1_immediate": {
+    "name": "Optimisation IMMÉDIATE (45 GB)",
+    "changes": {
+      "batch_size": "8 → 32",
+      "gradient_accumulation": "2 → 1",
+      "mixed_precision": true,
+      "gradient_checkpointing": true,
+      "data_caching": true,
+      "torch_compile": true
+    },
+    "expected_result": {
+      "speedup": "6-8x",
+      "steps_per_sec": "12-16",
+      "100k_steps": "1.7-2.3 hours",
+      "ram_usage": "~35 GB",
+      "vram_usage": "15-16 GB"
+    },
+    "risk": "LOW - bien dans les limites"
+  },
+  "phase_2_if_available": {
+    "name": "Augmenter RAM Hyper-V (si possible)",
+    "requirements": [
+      "Accès à l'hôte Hyper-V",
+      "Droits administrateur",
+      "RAM disponible sur l'hôte physique"
+    ],
+    "steps": [
+      {
+        "step": 1,
+        "title": "Sur l'hôte Hyper-V:",
+        "commands": [
+          "Arrêter la VM: shutdown -h now",
+          "Hyper-V Manager > Cliq droit sur VM > Settings",
+          "Memory > Augmenter \"Startup RAM\" de 45 → 96 GB",
+          "Sauvegarder et redémarrer la VM"
+        ]
+      },
+      {
+        "step": 2,
+        "title": "Dans la VM (après redémarrage):",
+        "commands": [
+          "free -h (vérifier 96 GB)",
+          "Passer à batch_size=64 (10-12x speedup)"
+        ]
+      }
+    ],
+    "result": {
+      "speedup": "10-12x",
+      "steps_per_sec": "20",
+      "100k_steps": "1.4 hours"
+    }
+  },
+  "implementation_plan": [
+    {
+      "priority": 1,
+      "title": "🚀 Lancer optimisation batch_32 MAINTENANT",
+      "time": "5 minutes",
+      "code": "Voir training_optimized_batch32.py"
+    },
+    {
+      "priority": 2,
+      "title": "📈 Contacter admin Hyper-V",
+      "time": "Parallel",
+      "action": "Demander augmentation RAM à 96 GB"
+    },
+    {
+      "priority": 3,
+      "title": "✅ Si RAM augmentée → redémarrer et passer batch_64",
+      "time": "Après redémarrage",
+      "code": "Voir training_optimized_batch64.py"
+    }
+  ]
+}

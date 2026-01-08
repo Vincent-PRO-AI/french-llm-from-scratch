@@ -1,0 +1,16 @@
+=== ANALYSE NETTOYAGE ===
+
+À GARDER (données essentielles):
+- data_clean/v2_tokenized/                  (12G)    - Données V2 tokenisées
+- data_clean/conversations_mega_*           (~2.5G) - Conversations principales
+- trained_models/runs/checkpoint_step_*.pt  (~6GB)  - Checkpoints actifs
+- scripts/, training_configs/, dashboard/          - Code source
+
+À SUPPRIMER (doublons/obsolète):
+- data_clean/french_pd_books/               (36G)   - Données brutes non tokenisées
+- data_clean/corpus_*.bin                   (11.5G) - Format obsolète
+- data_clean/french_large/                  (1.7G)  - Doublon non utilisé
+- data_clean/conversations_*_tokenized.pt   (67M)   - Doublons (garder mega)
+- data_clean/*/ dossiers raw                (~2G)   - Données brutes
+
+LIBÉRATION ESTIMÉE: ~60GB

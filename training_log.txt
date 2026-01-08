@@ -1,0 +1,28 @@
+Using device: cuda
+GPU: NVIDIA GeForce RTX 5080 | compute capability 12.0 | 15.92 GB total memory
+[ResourceDetection]
+  VRAM: 15.9 GB
+  RAM: 30.2 GB
+  NVMe free: 329.6 GB
+  Using NVMe cache at /tmp/torch_cache
+[TrainingConfig]
+  Batch size: 12
+  Gradient accumulation: 1
+  Effective batch size: 12
+  CPU offload: False
+  NVMe cache: True
+  Gradient checkpointing: True
+  Mixed precision: True
+[AutoResourceAdapt] Adapted config:
+  Batch size: 12
+  Gradient accumulation: 1
+  Effective batch: 12
+[resume] Loading checkpoint from trained_models/runs/french_v3_finetune_resample_1/checkpoint_step_160000.pt
+[resume] Reprise à partir de l'étape 160000
+Logging metrics to /home/vincent/code/repo/french-llm-from-scratch/trained_models/runs/french_medium_rtx5080_extended
+[DEBUG] setup() called, memmap_path=None
+[DEBUG] Loading pre-tokenized corpus from data_clean/conversations_mega_train_mistral_tokenized.pt
+[DEBUG] Loaded 85,490,944 tokens from pre-tokenized corpus
+[DEBUG] setup() called, memmap_path=None
+[DEBUG] Loaders already exist, skipping setup
+[train] Starting/Resuming training at step 160000 aiming for 500000 steps
