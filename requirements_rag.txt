@@ -1,0 +1,14 @@
+# Requirements pour le système RAG Wikipedia FR
+
+# Vector Database
+chromadb>=0.4.22
+
+# Embeddings
+sentence-transformers>=2.3.0
+
+# API
+flask>=3.0.0
+requests>=2.31.0
+
+# Utils
+tqdm>=4.66.0
