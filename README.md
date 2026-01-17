@@ -98,10 +98,10 @@ This project demonstrates the complete pipeline for training a medium-sized GPT 
 - Reproducible environment across systems
 
 **Hardware:**
-- GPU: NVIDIA RTX 5080 (16GB VRAM)
-- Base Training Time: Multiple phases to 100k steps
-- Fine-tuning Time: ~3h07 for 15k steps (100k → 115k)
-- Memory Usage: ~18% RAM, 102% CPU during training
+- GPU: NVIDIA RTX 4090 (24GB VRAM) + RTX 5080 (16GB VRAM)
+- RAM: 80GB System RAM
+- Training Progress: Scaling to 500k steps with optimized 4090 config (Batch 96)
+- Dataset size: 4GB pre-tokenized tokens (530 million tokens)
 
 ### 🚀 Quick Start
 
@@ -467,10 +467,10 @@ Ce projet démontre le pipeline complet pour entraîner un modèle GPT de taille
 - Environnement reproductible sur tous systèmes
 
 **Hardware :**
-- GPU : NVIDIA RTX 5080 (16GB VRAM)
-- Temps d'entraînement base : Plusieurs phases jusqu'à 100k steps
-- Temps de fine-tuning : ~3h07 pour 15k steps (100k → 115k)
-- Utilisation mémoire : ~18% RAM, 102% CPU pendant training
+- GPU : NVIDIA RTX 4090 (24GB VRAM) + RTX 5080 (16GB VRAM)
+- RAM : 80GB RAM Système
+- Progrès : Extension à 500k steps avec config optimisée (Batch 96)
+- Memory Usage : ~95% RAM pendant le chargement du dataset (530M tokens)
 
 ### 🚀 Démarrage rapide
 

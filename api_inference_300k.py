@@ -177,7 +177,7 @@ def info():
 if __name__ == '__main__':
     print(f"\n{'='*60}")
     print(f"🚀 API PRÊTE SUR http://127.0.0.1:5000")
-    print(f"   Modèle: {RUN_NAME} (step {ck_step}, loss {ck_loss})")
+    print(f"   Modèle: French LLM 300k (step {ck_step}, loss {ck_loss})")
     print(f"   Device: {cfg.device}")
     print(f"{'='*60}\n")
     
