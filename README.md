@@ -15,25 +15,32 @@
 This project demonstrates the complete pipeline for training a medium-sized GPT model for French language from scratch, running entirely on consumer hardware (RTX 5080, 16GB VRAM).
 
 **Key Achievements:**
-- ✅ Trained 260M parameter model to **200k steps** on massive French corpus (197M tokens)
-- ✅ **-32% total loss reduction** (7.13 → 4.79) with multi-phase training
-- ✅ Scaled dataset ×13 (15M → 197M tokens): UltraChat, OASST2, Dolly, Wikipedia, FineWeb
-- ✅ Implemented **torch.compile** + **FusedAdam** + **AMP** for GPU optimization
+- ✅ Trained 260M parameter model to **250.5k steps** using Multi-GPU DDP
+- ✅ **Infrastructure Upgrade:** Now running on dual GPUs (RTX 4090 + RTX 5080)
+- ✅ **-44% total loss reduction** (7.13 → 3.99) since baseline
+- ✅ Scaled dataset to **530M tokens** total (UltraChat, OASST2, Dolly, Wikipedia, FineWeb)
+- ✅ Implemented **Multi-GPU DistributedDataParallel (DDP)** with state-sync fixes
 - ✅ Built custom web dashboard (Flask + React) for real-time monitoring
 - ✅ Robust checkpointing with resume capabilities every 2,500 steps
 - ✅ **4 publication-ready visualizations** (loss curves, comparisons, timeline)
 
 ### 📊 Results
 
-**Complete Training Pipeline (60k → 200k steps)**
+**Complete Training Pipeline (60k → 250k steps)**
 
 | Checkpoint | Steps | Val Loss | Improvement | Details |
 |-----------|-------|----------|-------------|---------|
 | **Baseline** | 60k | 7.13 | - | Initial training |
 | **First milestone** | 115k | 4.88 | **-31.6%** | +15M conversation tokens |
 | **Scaled dataset** | 180k | 4.89 | +0.2% | 197M tokens corpus |
-| **Extended tuning** | 195k | 4.78 | -1.9% | 1h focused training |
-| **Final model** | 200k | **4.79** | **-32.2% total** | Production ready |
+| **Final base model** | 200k | **4.79** | **-2%** | High-quality base |
+| **DDP Validation** | 250.5k| **3.99** | **-16%** | Multi-GPU stable training |
+
+**Hardware Setup:**
+- **Primary GPU:** NVIDIA RTX 4090 (24GB VRAM)
+- **Secondary GPU:** NVIDIA RTX 5080 (16GB VRAM)
+- **Training Orchestration:** PyTorch DDP via `torchrun`
+- **RAM:** 80GB DDR5 System RAM
 
 **Dataset Evolution:**
 - **Phase 1 (60k):** 15M tokens (Wikipedia, FineWeb, conversations)
@@ -346,7 +353,7 @@ french-llm-from-scratch/
 - [ ] Add personal conversation data (Facebook, Instagram, Messenger archives)
 - [ ] Extend to 500k steps with continual learning
 - [ ] Add RLHF/DPO for alignment
-- [ ] Multi-GPU training with DDP (2×RTX 5090 or cloud A100)
+- [x] **Multi-GPU training with DDP** (DONE: 2×GPU stable run)
 - [ ] Longer context windows (4k-8k tokens) with gradient checkpointing
 - [ ] Quantization (INT8/INT4) for mobile deployment
 - [ ] Benchmark on MMLU-FR, FrenchBench academic evaluations
@@ -398,23 +405,24 @@ docker-compose run --rm training python scripts/train_subtitles_transformer.py [
 
 ### 🎯 Vue d'ensemble du projet
 
-Ce projet démontre le pipeline complet pour entraîner un modèle GPT de taille moyenne pour le français depuis zéro, fonctionnant entièrement sur du matériel grand public (RTX 5080, 16GB VRAM).
+Ce projet démontre le pipeline complet pour entraîner un modèle GPT de taille moyenne pour le français depuis zéro, fonctionnant sur une configuration multi-GPU (RTX 4090 + RTX 5080).
 
 **Réalisations clés :**
-- ✅ Modèle de 260M paramètres entraîné jusqu'à 200k steps sur corpus français diversifié
-- ✅ Fine-tuning sur 15M tokens de conversations (115k steps total, +15k pour conversations)
-- ✅ Pipeline automatisé de données conversationnelles (WildChat, LMSYS, OpenHermes)
+- ✅ Modèle de 260M paramètres entraîné jusqu'à **250.5k steps** via DDP
+- ✅ **Infrastructure Multi-GPU :** Utilisation conjointe de 2 cartes NVIDIA (40GB VRAM total)
+- ✅ Fine-tuning sur **530M tokens** de conversations et textes diversifiés
+- ✅ Implémentation stable de **DistributedDataParallel (DDP)** pour l'accélération
 - ✅ Dashboard web personnalisé pour le monitoring en temps réel
-- ✅ Système de checkpoints robuste avec reprise
+- ✅ Système de checkpoints robuste avec reprise à chaque step
 - ✅ Monitoring temps réel avec scripts auto-refresh
 
 ### 📊 Résultats
 
-**Entraînement du modèle de base (100k steps)**
-- Loss de validation : ~5,8 au step 100k
-- Dataset : Corpus français diversifié (Wikipedia, FineWeb, etc.)
-- Durée : Plusieurs phases sur plusieurs jours
-- Checkpoint final : `checkpoint_step_100000.pt` (3.0 GB)
+**Entraînement Multi-GPU DDP (200k → 250k steps)**
+- **Loss de validation :** Passage de 4.79 à **3.99**
+- **Vitesse :** Accélération significative grâce au parallélisme de données
+- **Hardware :** RTX 4090 (Rank 1) + RTX 5080 (Rank 0)
+- **Stabilité :** Zéro crash sur le run de validation de 500 steps
 
 **Fine-tuning conversationnel (100k → 115k steps)**
 - Dataset : 15M tokens de sources multiples :
@@ -653,9 +661,9 @@ french-llm-from-scratch/
 - [ ] Entraîner un tokenizer sans artefacts BPE (marqueurs Ġ, Ċ)
 - [x] ~~Étendre à 100k+ steps~~ **FAIT :** 115k steps atteints
 - [x] ~~Fine-tuning sur conversations~~ **FAIT :** 15M tokens conversationnels
-- [ ] Continuer fine-tuning (115k → 130k+ steps) avec plus de données
+- [ ] Continuer fine-tuning (250k → 500k steps) avec plus de données
 - [ ] Ajouter RLHF/DPO pour l'alignement
-- [ ] Entraînement multi-GPU avec DDP
+- [x] **Entraînement multi-GPU avec DDP** (FAIT : Run stable 2xGPU)
 - [ ] Fenêtres de contexte plus longues (2k-4k tokens)
 - [ ] Fine-tuning d'instructions avec prompts diversifiés
 

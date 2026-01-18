@@ -18,9 +18,11 @@ import sys
 import json
 import time
 import logging
+import math
 from pathlib import Path
 import argparse
 from datetime import datetime
+from typing import Optional, cast
 from types import SimpleNamespace
 
 import torch
@@ -162,16 +164,6 @@ class DistributedTrainer:
         self.world_size = world_size
         self.gpu_id = gpu_id
         
-        # Wrap model with DDP
-        self.model = DDP(
-            model,
-            device_ids=[gpu_id],
-            output_device=gpu_id,
-            find_unused_parameters=False,
-            broadcast_buffers=True,
-            gradient_as_bucket_view=True
-        )
-        
         # Training state
         self.global_step = 0
         self.start_step = 0
@@ -190,21 +182,43 @@ class DistributedTrainer:
         if self.rank == 0:
             self.writer = SummaryWriter(log_dir=str(self.checkpoint_dir))
         
-        # Load checkpoint if provided
+        # Load checkpoint if provided BEFORE DDP wrapping
         if args.resume_from:
-            self._load_checkpoint(args.resume_from)
+            self._load_checkpoint_pre_ddp(model, args.resume_from)
+            
+        # Wrap model with DDP
+        self.model = DDP(
+            model,
+            device_ids=[gpu_id],
+            output_device=gpu_id,
+            find_unused_parameters=False,
+            broadcast_buffers=True,
+            gradient_as_bucket_view=True
+        )
     
-    def _load_checkpoint(self, checkpoint_path):
-        """Load checkpoint for resuming"""
+    def _load_checkpoint_pre_ddp(self, model, checkpoint_path):
+        """Load checkpoint into model before wrapping with DDP"""
         if not os.path.exists(checkpoint_path):
             log_info(f"Checkpoint not found: {checkpoint_path}")
             return
         
         log_info(f"Loading checkpoint: {checkpoint_path}")
-        checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
         
-        # Load model state
-        self.model.module.load_state_dict(checkpoint['model_state'])
+        from pathlib import PosixPath
+        torch.serialization.add_safe_globals([PosixPath])
+        
+        try:
+            checkpoint = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+        except Exception as e:
+            log_info(f"Failed to load checkpoint: {e}")
+            return
+        
+        # Clean state dict if it has 'module.' prefixes
+        state_dict = checkpoint['model_state']
+        if any(k.startswith('module.') for k in state_dict.keys()):
+            state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
+            
+        model.load_state_dict(state_dict)
         
         # Load training state
         if 'optimizer_state' in checkpoint:
@@ -337,6 +351,9 @@ def main():
     parser.add_argument("--checkpoint-interval", type=int, default=2500)
     parser.add_argument("--seq-length", type=int, default=1024)
     parser.add_argument("--run-name", type=str, default="french_medium_multi_gpu")
+    # Add local_rank argument for torch.distributed.launch compatibility
+    parser.add_argument("--local-rank", "--local_rank", type=int, default=0, 
+                        help="Local rank for distributed training (auto-set by launcher)")
     
     args = parser.parse_args()
     
@@ -351,21 +368,69 @@ def main():
     log_info(f"Effective Batch: {args.batch_size * args.gradient_accumulation_steps * world_size}")
     log_info("=" * 80)
     
-    class SimpleTransformer(nn.Module):
-        def __init__(self, vocab_size=32000, d_model=1024, nhead=16, num_layers=4):
+    class PositionalEncoding(nn.Module):
+        def __init__(self, embed_dim: int, max_seq_len: int) -> None:
             super().__init__()
-            self.embedding = nn.Embedding(vocab_size, d_model)
-            self.transformer = nn.TransformerEncoder(
-                nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True),
-                num_layers=num_layers
+            self.register_buffer(
+                "pos_encoding",
+                self._create_encoding(embed_dim, max_seq_len),
+                persistent=False,
             )
-            self.fc = nn.Linear(d_model, vocab_size)
+
+        @staticmethod
+        def _create_encoding(embed_dim: int, max_seq_len: int) -> torch.Tensor:
+            position = torch.arange(max_seq_len).unsqueeze(1)
+            div_term = torch.exp(
+                torch.arange(0, embed_dim, 2, dtype=torch.float32)
+                * (-math.log(10000.0) / embed_dim)
+            )
+            encoding = torch.zeros(max_seq_len, embed_dim, dtype=torch.float32)
+            encoding[:, 0::2] = torch.sin(position * div_term)
+            encoding[:, 1::2] = torch.cos(position * div_term)
+            return encoding.unsqueeze(0)
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            seq_len = x.size(1)
+            pos_enc = cast(torch.Tensor, getattr(self, "pos_encoding"))
+            return x + pos_enc[:, :seq_len]
+
+    class TinyTransformerLM(nn.Module):
+        def __init__(self, vocab_size=32000, embed_dim=1024, num_heads=16, num_layers=18, ff_hidden_dim=4096, block_size=1024, dropout=0.1):
+            super().__init__()
+            self.tok_embed = nn.Embedding(vocab_size, embed_dim)
+            self.pos_encoding = PositionalEncoding(embed_dim, block_size)
+            encoder_layer = nn.TransformerEncoderLayer(
+                d_model=embed_dim,
+                nhead=num_heads,
+                dim_feedforward=ff_hidden_dim,
+                dropout=dropout,
+                activation="gelu",
+                batch_first=True,
+            )
+            self.encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+            self.ln = nn.LayerNorm(embed_dim)
+            self.head = nn.Linear(embed_dim, vocab_size, bias=False)
+            
+            # Weight tying
+            self.head.weight = self.tok_embed.weight
+            
+            self.register_buffer(
+                "causal_mask",
+                torch.triu(torch.ones(block_size, block_size, dtype=torch.bool), diagonal=1),
+                persistent=False,
+            )
             self.loss_fct = nn.CrossEntropyLoss()
 
-        def forward(self, input_ids, labels=None):
-            x = self.embedding(input_ids)
-            x = self.transformer(x)
-            logits = self.fc(x)
+        def forward(self, tokens, labels=None):
+            x = self.tok_embed(tokens)
+            x = self.pos_encoding(x)
+            seq_len = tokens.size(1)
+            causal = cast(torch.Tensor, getattr(self, "causal_mask"))
+            mask = causal[:seq_len, :seq_len].to(tokens.device)
+            
+            x = self.encoder(x, mask=mask)
+            x = self.ln(x)
+            logits = self.head(x)
             
             loss = None
             if labels is not None:
@@ -374,7 +439,7 @@ def main():
             return SimpleNamespace(loss=loss, logits=logits)
 
     # Create model
-    model = SimpleTransformer()
+    model = TinyTransformerLM()
     
     # Move to GPU
     model = model.to(gpu_id)

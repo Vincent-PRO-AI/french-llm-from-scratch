@@ -1,8 +1,9 @@
 version: '3.8'
 
 # Multi-GPU Docker Compose Configuration
-# Hardware: 96GB RAM, RTX 5080 (12GB), RTX 4090 (24GB)
+# Hardware: 96GB RAM, RTX 5080 (16GB), RTX 4090 (24GB)
 # Supports distributed training across GPUs
+# Model: 292M params (~5.5GB per GPU in DDP mode)
 
 services:
   # Backend monitoring API
@@ -52,12 +53,12 @@ services:
       --master_addr=training-master
       --master_port=29500
       scripts/train_subtitles_transformer_ddp.py
-      --max-steps 250000
-      --batch-size 12
+      --max-steps 300000
+      --batch-size 10
       --gradient-accumulation-steps 2
       --learning-rate 1e-4
       --warmup-steps 1000
-      --resume-from trained_models/runs/french_medium_base_60k/checkpoint_step_60000.pt
+      --resume-from trained_models/checkpoint_250k_fixed.pt
     volumes:
       - ./data_clean:/workspace/data_clean
       - ./trained_models:/workspace/trained_models
@@ -88,7 +89,7 @@ services:
     profiles:
       - multi-gpu
 
-  # Secondary GPU node (RTX 5080 - 12GB) - Worker
+  # Secondary GPU node (RTX 5080 - 16GB) - Worker
   training-worker:
     build:
       context: .
@@ -102,12 +103,12 @@ services:
       --master_addr=training-master
       --master_port=29500
       scripts/train_subtitles_transformer_ddp.py
-      --max-steps 250000
-      --batch-size 12
+      --max-steps 300000
+      --batch-size 8
       --gradient-accumulation-steps 2
       --learning-rate 1e-4
       --warmup-steps 1000
-      --resume-from trained_models/runs/french_medium_base_60k/checkpoint_step_60000.pt
+      --resume-from trained_models/checkpoint_250k_fixed.pt
     volumes:
       - ./data_clean:/workspace/data_clean
       - ./trained_models:/workspace/trained_models

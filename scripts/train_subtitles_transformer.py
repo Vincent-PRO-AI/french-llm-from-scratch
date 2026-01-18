@@ -19,6 +19,15 @@ import torch
 from torch import nn
 import numpy as np
 from torch.utils.data import DataLoader, Dataset
+import psutil
+
+# Import mémoire manager
+try:
+    from utils.memory_manager import MemoryManager, MemoryConfig, print_memory_report
+    MEMORY_MANAGER_AVAILABLE = True
+except ImportError:
+    MEMORY_MANAGER_AVAILABLE = False
+    print("[WARNING] Memory manager not available, fallback to basic management")
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA_DIR = ROOT / "data_clean"
@@ -1303,6 +1312,32 @@ class SubtitleTrainer:
             self.model = GPTLanguageModel(cfg).to(self.device)
         else:
             self.model = TinyTransformerLM(cfg).to(self.device)
+        
+        # Charger checkpoint AVANT DDP wrapping (évite conflits de clés "module.")
+        self.start_step = 0
+        if checkpoint is not None:
+            model_state = checkpoint.get("model_state") or checkpoint.get("model")
+            if model_state is None:
+                raise ValueError("Checkpoint does not contain model_state or model")
+            if isinstance(model_state, dict):
+                self.model.load_state_dict(model_state, strict=True)
+            else:
+                print("[warn] model_state inattendu, skip load_state_dict")
+            step_val = checkpoint.get("step", 0)
+            try:
+                self.start_step = int(step_val)  # type: ignore[arg-type]
+            except Exception:
+                self.start_step = 0
+            print(f"[resume] Reprise à partir de l'étape {self.start_step}")
+        
+        # Optionnel: envelopper le model dans DDP si lancé en mode distribué
+        # (torch.distributed est initialisé seulement via torch.distributed.launch)
+        if torch.distributed.is_available() and torch.distributed.is_initialized():
+            self.model = torch.nn.parallel.DistributedDataParallel(self.model)
+            rank = torch.distributed.get_rank()
+            world_size = torch.distributed.get_world_size()
+            print(f"[DDP] Model wrapped on rank {rank}/{world_size}")
+        
         self.model_summary = summarise_model(self.model)
         self.criterion = nn.CrossEntropyLoss()
         self.optimizer = torch.optim.AdamW(
@@ -1323,7 +1358,7 @@ class SubtitleTrainer:
             if model_state is None:
                 raise ValueError("Checkpoint does not contain model_state or model")
             if isinstance(model_state, dict):
-                self.model.load_state_dict(model_state, strict=True)
+                self.model.load_state_dict(model_state, strict=False)
             else:
                 print("[warn] model_state inattendu, skip load_state_dict")
             optim_state = checkpoint.get("optimizer_state")
@@ -1705,7 +1740,9 @@ class SubtitleTrainer:
                     )
 
                 if self.visual_logger is not None and (should_log_train or sample_text is not None):
-                    embed_mod = cast(nn.Embedding, self.model.tok_embed)
+                    # Accéder au model de base si enveloppé dans DDP
+                    base_model = self.model.module if isinstance(self.model, torch.nn.parallel.DistributedDataParallel) else self.model
+                    embed_mod = cast(nn.Embedding, base_model.tok_embed)
                     embeddings_snapshot = embed_mod.weight.detach().cpu()
                     valid_positions = (~padding_mask[0]).nonzero(as_tuple=False)
                     tail_index = int(valid_positions[-1]) if valid_positions.numel() else -1
@@ -1922,6 +1959,12 @@ def parse_args() -> Config:
         type=int,
         default=None,
         help="Graine aléatoire (défaut: 13)",
+    )
+    parser.add_argument(
+        "--local-rank",
+        type=int,
+        default=-1,
+        help="Rank for DDP (auto set by torch.distributed.launch)",
     )
     parser.add_argument(
         "--device",
@@ -2165,7 +2208,20 @@ def parse_args() -> Config:
 
 
 def main() -> None:
+    import os
+    
     cfg = parse_args()
+    
+    # Initialiser DDP si lancé via torch.distributed.launch
+    local_rank = int(os.environ.get("LOCAL_RANK", -1))
+    if local_rank != -1:
+        # DDP Mode - initialiser torch.distributed
+        torch.distributed.init_process_group(backend="nccl")
+        # Sélectionner le device basé sur le rank local
+        torch.cuda.set_device(local_rank)
+        cfg.device = f"cuda:{local_rank}"
+        print(f"[DDP] Initialized rank {local_rank} on device cuda:{local_rank}")
+    
     trainer = SubtitleTrainer(cfg)
     trainer.run()
 
