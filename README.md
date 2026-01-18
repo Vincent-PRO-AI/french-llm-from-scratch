@@ -42,6 +42,20 @@ This project demonstrates the complete pipeline for training a medium-sized GPT 
 - **Training Orchestration:** PyTorch DDP via `torchrun`
 - **RAM:** 80GB DDR5 System RAM
 
+## 🚀 Mistral-7B QLoRA Fine-tuning
+
+Expanding beyond training from scratch, we've implemented a professional fine-tuning pipeline for **Mistral-7B-v0.3** using **QLoRA** on our Multi-GPU infrastructure.
+
+**Highlights:**
+- **Technique:** QLoRA (4-bit BitsAndBytes quantization)
+- **Framework:** PEFT + DDP (Multi-GPU execution)
+- **Stability:** Forced `bfloat16` and optimized learning rate (`5e-5`) to avoid loss divergence.
+- **Merge & Export:** Custom scripts to merge LoRA adapters back to base model.
+- **Format:** Fully exported to **GGUF** (F16 and Q4_K_M) for seamless integration with **LM Studio**.
+
+**Why this matters:**
+This demonstrates the ability to take state-of-the-art weights and customize them for French specificities on local hardware, while ensuring the result is immediately deployable.
+
 **Dataset Evolution:**
 - **Phase 1 (60k):** 15M tokens (Wikipedia, FineWeb, conversations)
 - **Phase 2 (115k):** +15M conversation tokens (WildChat, LMSYS, OpenHermes)

@@ -1,0 +1,143 @@
+version: '3.8'
+
+# Docker Compose for DDP Multi-GPU Training
+# Runs distributed training across 2 GPUs with flexible memory management
+
+services:
+  # GPU 0 Rank 0 - Primary training process
+  ddp-rank0:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: french-llm-ddp-rank0
+    command: >
+      python -m torch.distributed.launch
+      --nproc_per_node=1
+      --nnodes=2
+      --node_rank=0
+      --master_addr=ddp-master
+      --master_port=29500
+      scripts/train_subtitles_transformer.py
+      --arch-preset medium
+      --pretokenized-path /workspace/data_clean/conversations_mega_train_mistral_tokenized.pt
+      --resume-from /workspace/trained_models/checkpoint_250k_fixed.pt
+      --max-steps 350000
+      --batch-size 4
+      --log-dir /workspace/trained_models/runs
+      --gradient-accumulation-steps 2
+      --cpu-offload
+      --gradient-checkpointing
+      --checkpoint-interval 2500
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - CUDA_LAUNCH_BLOCKING=1
+      - NCCL_DEBUG=INFO
+      - OMP_NUM_THREADS=1
+    volumes:
+      - ./data_clean:/workspace/data_clean
+      - ./trained_models:/workspace/trained_models
+      - ./scripts:/workspace/scripts
+      - ./utils:/workspace/utils
+      - /nvme_cache:/nvme_cache:rw  # NVMe spillover
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+        limits:
+          memory: 32G  # Max 32GB RAM per container
+          cpus: '16'
+    networks:
+      - ddp-network
+    depends_on:
+      - ddp-master
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # GPU 1 Rank 1 - Secondary training process
+  ddp-rank1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: french-llm-ddp-rank1
+    command: >
+      python -m torch.distributed.launch
+      --nproc_per_node=1
+      --nnodes=2
+      --node_rank=1
+      --master_addr=ddp-master
+      --master_port=29500
+      scripts/train_subtitles_transformer.py
+      --arch-preset medium
+      --pretokenized-path /workspace/data_clean/conversations_mega_train_mistral_tokenized.pt
+      --resume-from /workspace/trained_models/checkpoint_250k_fixed.pt
+      --max-steps 350000
+      --batch-size 4
+      --log-dir /workspace/trained_models/runs
+      --gradient-accumulation-steps 2
+      --cpu-offload
+      --gradient-checkpointing
+      --checkpoint-interval 2500
+    environment:
+      - CUDA_VISIBLE_DEVICES=1
+      - PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+      - CUDA_LAUNCH_BLOCKING=1
+      - NCCL_DEBUG=INFO
+      - OMP_NUM_THREADS=1
+    volumes:
+      - ./data_clean:/workspace/data_clean
+      - ./trained_models:/workspace/trained_models
+      - ./scripts:/workspace/scripts
+      - ./utils:/workspace/utils
+      - /nvme_cache:/nvme_cache:rw  # NVMe spillover
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['1']
+              capabilities: [gpu]
+        limits:
+          memory: 32G  # Max 32GB RAM per container
+          cpus: '16'
+    networks:
+      - ddp-network
+    depends_on:
+      - ddp-master
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Master process for NCCL coordination
+  ddp-master:
+    image: ubuntu:22.04
+    container_name: french-llm-ddp-master
+    command: /bin/bash -c "while true; do sleep 10; done"  # Keep alive
+    networks:
+      - ddp-network
+    environment:
+      - NCCL_SOCKET_IFNAME=eth0
+    healthcheck:
+      test: ["CMD", "test", "-f", "/tmp/.ddp-ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+networks:
+  ddp-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/16
+
+volumes:
+  nvme-cache:
+    driver: local
